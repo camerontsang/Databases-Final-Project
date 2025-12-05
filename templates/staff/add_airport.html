@@ -1,0 +1,29 @@
+{% extends 'layout.html' %}
+
+{% block title %}Add Airport - Air Ticket System{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="card">
+        <h2 class="card-header">🏛️ Add New Airport</h2>
+        
+        <form method="POST" action="{{ url_for('staff_add_airport') }}">
+            <div class="form-group">
+                <label for="airport_name">Airport Code/Name *</label>
+                <input type="text" name="airport_name" id="airport_name" class="form-control" required
+                       placeholder="e.g., JFK or John F. Kennedy International">
+            </div>
+            
+            <div class="form-group">
+                <label for="airport_city">City *</label>
+                <input type="text" name="airport_city" id="airport_city" class="form-control" required
+                       placeholder="e.g., New York">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Add Airport</button>
+        </form>
+        
+        <a href="{{ url_for('staff_home') }}" class="btn btn-secondary btn-block mt-2">Cancel</a>
+    </div>
+</div>
+{% endblock %}

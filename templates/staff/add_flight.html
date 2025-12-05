@@ -1,0 +1,72 @@
+{% extends 'layout.html' %}
+
+{% block title %}Add Flight - Air Ticket System{% endblock %}
+
+{% block content %}
+<div class="auth-container" style="max-width: 600px;">
+    <div class="card">
+        <h2 class="card-header">🛫 Add New Flight</h2>
+        <p class="mb-3">Adding flight for: <strong>{{ airline }}</strong></p>
+        
+        <form method="POST" action="{{ url_for('staff_add_flight') }}">
+            <div class="form-group">
+                <label for="flight_num">Flight Number *</label>
+                <input type="text" name="flight_num" id="flight_num" class="form-control" required
+                       placeholder="e.g., 123">
+            </div>
+            
+            <div class="form-group">
+                <label for="airplane_id">Airplane *</label>
+                <select name="airplane_id" id="airplane_id" class="form-control" required>
+                    <option value="">Select airplane</option>
+                    {% for plane in airplanes %}
+                    <option value="{{ plane.airplane_id }}">{{ plane.airplane_id }} ({{ plane.seats }} seats)</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="departure_airport">Departure Airport *</label>
+                    <select name="departure_airport" id="departure_airport" class="form-control" required>
+                        <option value="">Select airport</option>
+                        {% for airport in airports %}
+                        <option value="{{ airport.airport_name }}">{{ airport.airport_name }} - {{ airport.airport_city }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="arrival_airport">Arrival Airport *</label>
+                    <select name="arrival_airport" id="arrival_airport" class="form-control" required>
+                        <option value="">Select airport</option>
+                        {% for airport in airports %}
+                        <option value="{{ airport.airport_name }}">{{ airport.airport_name }} - {{ airport.airport_city }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="departure_time">Departure Time *</label>
+                    <input type="datetime-local" name="departure_time" id="departure_time" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="arrival_time">Arrival Time *</label>
+                    <input type="datetime-local" name="arrival_time" id="arrival_time" class="form-control" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="price">Base Price ($) *</label>
+                <input type="number" name="price" id="price" class="form-control" required min="0" step="0.01"
+                       placeholder="e.g., 299.99">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Add Flight</button>
+        </form>
+        
+        <a href="{{ url_for('staff_home') }}" class="btn btn-secondary btn-block mt-2">Cancel</a>
+    </div>
+</div>
+{% endblock %}

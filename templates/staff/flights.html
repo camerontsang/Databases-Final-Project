@@ -1,0 +1,85 @@
+{% extends 'layout.html' %}
+
+{% block title %}Manage Flights - Air Ticket System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="card-header">🛫 All Flights - {{ airline }}</h2>
+    
+    <form method="POST" action="{{ url_for('staff_flights') }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="start_date">From Date</label>
+                <input type="date" name="start_date" id="start_date" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="end_date">To Date</label>
+                <input type="date" name="end_date" id="end_date" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="source">Origin</label>
+                <input type="text" name="source" id="source" class="form-control" placeholder="City or airport">
+            </div>
+            <div class="form-group">
+                <label for="destination">Destination</label>
+                <input type="text" name="destination" id="destination" class="form-control" placeholder="City or airport">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a href="{{ url_for('staff_flights') }}" class="btn btn-secondary">Clear</a>
+    </form>
+</div>
+
+<div class="card">
+    <h3 class="card-header">Flights ({{ flights|length }} found)</h3>
+    
+    {% if flights %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Flight #</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Departure</th>
+                    <th>Arrival</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for flight in flights %}
+                <tr>
+                    <td>{{ flight.flight_num }}</td>
+                    <td>{{ flight.departure_airport }}<br><small>{{ flight.departure_city }}</small></td>
+                    <td>{{ flight.arrival_airport }}<br><small>{{ flight.arrival_city }}</small></td>
+                    <td>{{ flight.departure_time.strftime('%b %d, %Y %H:%M') }}</td>
+                    <td>{{ flight.arrival_time.strftime('%b %d, %Y %H:%M') }}</td>
+                    <td>${{ "%.2f"|format(flight.price) }}</td>
+                    <td><span class="badge badge-{{ flight.status|lower|replace(' ', '-') }}">{{ flight.status }}</span></td>
+                    <td>
+                        <a href="{{ url_for('staff_passengers', flight_num=flight.flight_num, departure_time=flight.departure_time) }}" class="btn btn-sm btn-secondary">Passengers</a>
+                        {% if 'Operator' in permissions %}
+                        <form method="POST" action="{{ url_for('staff_update_status') }}" style="display: inline; margin-left: 0.5rem;">
+                            <input type="hidden" name="flight_num" value="{{ flight.flight_num }}">
+                            <input type="hidden" name="departure_time" value="{{ flight.departure_time }}">
+                            <select name="status" class="form-control" style="width: auto; display: inline; padding: 0.25rem;">
+                                {% for status in statuses %}
+                                <option value="{{ status }}" {% if status == flight.status %}selected{% endif %}>{{ status }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p class="text-center">No flights found.</p>
+    {% endif %}
+</div>
+{% endblock %}

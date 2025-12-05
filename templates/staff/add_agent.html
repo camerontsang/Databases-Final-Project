@@ -1,0 +1,25 @@
+{% extends 'layout.html' %}
+
+{% block title %}Add Booking Agent - Air Ticket System{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="card">
+        <h2 class="card-header">🤝 Associate Booking Agent</h2>
+        <p class="mb-3">Authorize a booking agent to work for: <strong>{{ airline }}</strong></p>
+        
+        <form method="POST" action="{{ url_for('staff_add_agent') }}">
+            <div class="form-group">
+                <label for="agent_email">Agent Email *</label>
+                <input type="email" name="agent_email" id="agent_email" class="form-control" required
+                       placeholder="agent@example.com">
+                <small style="color: #666;">The booking agent must already be registered in the system.</small>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Authorize Agent</button>
+        </form>
+        
+        <a href="{{ url_for('staff_home') }}" class="btn btn-secondary btn-block mt-2">Cancel</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'layout.html' %}
+
+{% block title %}Passengers - Air Ticket System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="card-header">👥 Passengers on Flight {{ flight.flight_num }}</h2>
+    
+    <div class="flight-card" style="box-shadow: none; padding: 0; margin-bottom: 1rem;">
+        <div class="flight-route">
+            <div class="flight-city">
+                <div class="flight-city-code">{{ flight.departure_airport }}</div>
+            </div>
+            <div class="flight-arrow">→</div>
+            <div class="flight-city">
+                <div class="flight-city-code">{{ flight.arrival_airport }}</div>
+            </div>
+        </div>
+        <div class="flight-details">
+            <div class="flight-info">
+                <div class="flight-info-label">Departure</div>
+                <div class="flight-info-value">{{ flight.departure_time.strftime('%b %d, %Y %H:%M') }}</div>
+            </div>
+            <div class="flight-info">
+                <div class="flight-info-label">Status</div>
+                <div class="flight-info-value"><span class="badge badge-{{ flight.status|lower|replace(' ', '-') }}">{{ flight.status }}</span></div>
+            </div>
+        </div>
+    </div>
+    
+    {% if passengers %}
+    <p><strong>{{ passengers|length }}</strong> passenger(s) on this flight</p>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Ticket #</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Passport</th>
+                    <th>Booked By</th>
+                    <th>Purchase Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in passengers %}
+                <tr>
+                    <td>{{ p.ticket_id }}</td>
+                    <td>{{ p.name }}</td>
+                    <td>{{ p.email }}</td>
+                    <td>{{ p.phone_number or '-' }}</td>
+                    <td>{{ p.passport_number or '-' }}</td>
+                    <td>{% if p.booking_agent_id %}Agent #{{ p.booking_agent_id }}{% else %}Direct{% endif %}</td>
+                    <td>{{ p.purchase_date.strftime('%b %d, %Y') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p class="text-center">No passengers booked on this flight.</p>
+    {% endif %}
+    
+    <a href="{{ url_for('staff_flights') }}" class="btn btn-secondary mt-3">← Back to Flights</a>
+</div>
+{% endblock %}

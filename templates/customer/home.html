@@ -1,0 +1,72 @@
+{% extends 'layout.html' %}
+
+{% block title %}My Dashboard - Air Ticket System{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Welcome back, {{ user_name }}!</h1>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ flights|length }}</div>
+        <div class="stat-label">Upcoming Flights</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="card-header">✈️ Your Upcoming Flights</h2>
+    
+    {% if flights %}
+        {% for flight in flights %}
+        <div class="flight-card">
+            <div class="flight-route">
+                <div class="flight-city">
+                    <div class="flight-city-code">{{ flight.departure_airport }}</div>
+                    <div class="flight-city-name">{{ flight.departure_city }}</div>
+                </div>
+                <div class="flight-arrow">→</div>
+                <div class="flight-city">
+                    <div class="flight-city-code">{{ flight.arrival_airport }}</div>
+                    <div class="flight-city-name">{{ flight.arrival_city }}</div>
+                </div>
+            </div>
+            
+            <div class="flight-details">
+                <div class="flight-info">
+                    <div class="flight-info-label">Airline</div>
+                    <div class="flight-info-value">{{ flight.airline_name }}</div>
+                </div>
+                <div class="flight-info">
+                    <div class="flight-info-label">Flight</div>
+                    <div class="flight-info-value">{{ flight.flight_num }}</div>
+                </div>
+                <div class="flight-info">
+                    <div class="flight-info-label">Departure</div>
+                    <div class="flight-info-value">{{ flight.departure_time.strftime('%b %d, %H:%M') }}</div>
+                </div>
+                <div class="flight-info">
+                    <div class="flight-info-label">Ticket #</div>
+                    <div class="flight-info-value">{{ flight.ticket_id }}</div>
+                </div>
+            </div>
+            
+            <span class="badge badge-{{ flight.status|lower|replace(' ', '-') }}">{{ flight.status }}</span>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p class="text-center">No upcoming flights. <a href="{{ url_for('customer_purchase') }}">Book a flight now!</a></p>
+    {% endif %}
+</div>
+
+<div class="grid-2 mt-3">
+    <a href="{{ url_for('customer_purchase') }}" class="card text-center" style="text-decoration: none; color: inherit;">
+        <div style="font-size: 2rem;">🎫</div>
+        <h3>Book a Flight</h3>
+        <p>Search and purchase tickets for your next trip</p>
+    </a>
+    <a href="{{ url_for('customer_spending') }}" class="card text-center" style="text-decoration: none; color: inherit;">
+        <div style="font-size: 2rem;">📊</div>
+        <h3>View Spending</h3>
+        <p>Track your travel expenses and history</p>
+    </a>
+</div>
+{% endblock %}

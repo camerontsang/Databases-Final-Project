@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Air Ticket System{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="{{ url_for('index') }}">✈️ Air Ticket System</a>
+        </div>
+        <div class="nav-links">
+            {% if logged_in %}
+                {% if user_type == 'customer' %}
+                    <a href="{{ url_for('customer_home') }}">Home</a>
+                    <a href="{{ url_for('customer_my_flights') }}">My Flights</a>
+                    <a href="{{ url_for('customer_purchase') }}">Purchase</a>
+                    <a href="{{ url_for('customer_spending') }}">Spending</a>
+                {% elif user_type == 'agent' %}
+                    <a href="{{ url_for('agent_home') }}">Home</a>
+                    <a href="{{ url_for('agent_my_bookings') }}">Bookings</a>
+                    <a href="{{ url_for('agent_purchase') }}">Purchase</a>
+                    <a href="{{ url_for('agent_analytics') }}">Analytics</a>
+                {% elif user_type == 'staff' %}
+                    <a href="{{ url_for('staff_home') }}">Home</a>
+                    <a href="{{ url_for('staff_flights') }}">Flights</a>
+                    <a href="{{ url_for('staff_customer_flights') }}">Customer Lookup</a>
+                    <a href="{{ url_for('staff_analytics') }}">Analytics</a>
+                    {% if 'Admin' in permissions %}
+                        <a href="{{ url_for('staff_add_flight') }}">Add Flight</a>
+                        <a href="{{ url_for('staff_add_airplane') }}">Add Airplane</a>
+                        <a href="{{ url_for('staff_add_airport') }}">Add Airport</a>
+                        <a href="{{ url_for('staff_add_agent') }}">Add Agent</a>
+                    {% endif %}
+                {% endif %}
+                <span class="nav-user">{{ user_name or username }}</span>
+                <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+            {% else %}
+                <a href="{{ url_for('search_flights') }}">Search Flights</a>
+                <a href="{{ url_for('flight_status') }}">Flight Status</a>
+                <a href="{{ url_for('login') }}">Login</a>
+                <a href="{{ url_for('register_select') }}">Register</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                        <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2024 Air Ticket Reservation System - CSCI-SHU 213</p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

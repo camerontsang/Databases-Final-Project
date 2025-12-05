@@ -1,0 +1,46 @@
+{% extends 'layout.html' %}
+
+{% block title %}Home - Air Ticket System{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>✈️ Welcome to Air Ticket Reservation System</h1>
+    <p>Book your flights with ease and confidence. Search, compare, and book tickets for your next adventure.</p>
+    <div class="hero-buttons">
+        <a href="{{ url_for('search_flights') }}" class="btn btn-primary" style="background: white; color: #1e3c72;">Search Flights</a>
+        <a href="{{ url_for('flight_status') }}" class="btn btn-secondary" style="background: rgba(255,255,255,0.2);">Check Flight Status</a>
+    </div>
+</div>
+
+<div class="feature-cards">
+    <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <h3>Search Flights</h3>
+        <p>Find the perfect flight by searching origin, destination, and travel dates.</p>
+    </div>
+    <div class="feature-card">
+        <div class="feature-icon">🎫</div>
+        <h3>Easy Booking</h3>
+        <p>Book tickets quickly and securely with our streamlined purchase process.</p>
+    </div>
+    <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Track Spending</h3>
+        <p>Monitor your travel expenses with detailed spending analytics and charts.</p>
+    </div>
+    <div class="feature-card">
+        <div class="feature-icon">✅</div>
+        <h3>Flight Status</h3>
+        <p>Check real-time status of any flight by airline and flight number.</p>
+    </div>
+</div>
+
+{% if not logged_in %}
+<div class="card mt-4 text-center">
+    <h2>Ready to get started?</h2>
+    <p class="mt-2 mb-3">Create an account or log in to book your next flight.</p>
+    <a href="{{ url_for('register_select') }}" class="btn btn-primary">Register Now</a>
+    <a href="{{ url_for('login') }}" class="btn btn-secondary">Login</a>
+</div>
+{% endif %}
+{% endblock %}

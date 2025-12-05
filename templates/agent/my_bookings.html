@@ -1,0 +1,71 @@
+{% extends 'layout.html' %}
+
+{% block title %}My Bookings - Air Ticket System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="card-header">📋 My Bookings</h2>
+    
+    <form method="POST" action="{{ url_for('agent_my_bookings') }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="start_date">From Date</label>
+                <input type="date" name="start_date" id="start_date" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="end_date">To Date</label>
+                <input type="date" name="end_date" id="end_date" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="source">Origin</label>
+                <input type="text" name="source" id="source" class="form-control" placeholder="City or airport">
+            </div>
+            <div class="form-group">
+                <label for="destination">Destination</label>
+                <input type="text" name="destination" id="destination" class="form-control" placeholder="City or airport">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a href="{{ url_for('agent_my_bookings') }}" class="btn btn-secondary">Clear</a>
+    </form>
+</div>
+
+<div class="card">
+    <h3 class="card-header">Booking History ({{ bookings|length }} bookings)</h3>
+    
+    {% if bookings %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Ticket #</th>
+                    <th>Customer</th>
+                    <th>Airline</th>
+                    <th>Flight</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Departure</th>
+                    <th>Purchase Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                <tr>
+                    <td>{{ booking.ticket_id }}</td>
+                    <td>{{ booking.customer_email }}</td>
+                    <td>{{ booking.airline_name }}</td>
+                    <td>{{ booking.flight_num }}</td>
+                    <td>{{ booking.departure_airport }}</td>
+                    <td>{{ booking.arrival_airport }}</td>
+                    <td>{{ booking.departure_time.strftime('%b %d, %Y %H:%M') }}</td>
+                    <td>{{ booking.purchase_date.strftime('%b %d, %Y') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p class="text-center">No bookings found.</p>
+    {% endif %}
+</div>
+{% endblock %}

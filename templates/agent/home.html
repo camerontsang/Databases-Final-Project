@@ -1,0 +1,62 @@
+{% extends 'layout.html' %}
+
+{% block title %}Agent Dashboard - Air Ticket System{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Booking Agent Dashboard</h1>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ bookings|length }}</div>
+        <div class="stat-label">Recent Bookings</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="card-header">📋 Recent Bookings</h2>
+    
+    {% if bookings %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Ticket #</th>
+                    <th>Customer</th>
+                    <th>Flight</th>
+                    <th>Route</th>
+                    <th>Departure</th>
+                    <th>Purchase Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                <tr>
+                    <td>{{ booking.ticket_id }}</td>
+                    <td>{{ booking.customer_email }}</td>
+                    <td>{{ booking.airline_name }} {{ booking.flight_num }}</td>
+                    <td>{{ booking.departure_airport }} → {{ booking.arrival_airport }}</td>
+                    <td>{{ booking.departure_time.strftime('%b %d, %Y %H:%M') }}</td>
+                    <td>{{ booking.purchase_date.strftime('%b %d, %Y') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p class="text-center">No bookings yet. <a href="{{ url_for('agent_purchase') }}">Book a flight for a customer!</a></p>
+    {% endif %}
+</div>
+
+<div class="grid-2 mt-3">
+    <a href="{{ url_for('agent_purchase') }}" class="card text-center" style="text-decoration: none; color: inherit;">
+        <div style="font-size: 2rem;">🎫</div>
+        <h3>Book a Flight</h3>
+        <p>Purchase tickets for customers</p>
+    </a>
+    <a href="{{ url_for('agent_analytics') }}" class="card text-center" style="text-decoration: none; color: inherit;">
+        <div style="font-size: 2rem;">📊</div>
+        <h3>View Analytics</h3>
+        <p>Commission and performance stats</p>
+    </a>
+</div>
+{% endblock %}

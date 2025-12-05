@@ -1,0 +1,80 @@
+{% extends 'layout.html' %}
+
+{% block title %}Staff Dashboard - Air Ticket System{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Welcome, {{ user_name }}!</h1>
+<p class="mb-3">Airline: <strong>{{ airline }}</strong> | Permissions: <strong>{{ permissions|join(', ') or 'None' }}</strong></p>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ flights|length }}</div>
+        <div class="stat-label">Flights (Next 30 Days)</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="card-header">✈️ Upcoming Flights (Next 30 Days)</h2>
+    
+    {% if flights %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Flight</th>
+                    <th>Route</th>
+                    <th>Departure</th>
+                    <th>Arrival</th>
+                    <th>Status</th>
+                    <th>Seats</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for flight in flights %}
+                <tr>
+                    <td>{{ flight.flight_num }}</td>
+                    <td>{{ flight.departure_airport }} → {{ flight.arrival_airport }}</td>
+                    <td>{{ flight.departure_time.strftime('%b %d, %H:%M') }}</td>
+                    <td>{{ flight.arrival_time.strftime('%b %d, %H:%M') }}</td>
+                    <td><span class="badge badge-{{ flight.status|lower|replace(' ', '-') }}">{{ flight.status }}</span></td>
+                    <td>{{ flight.sold_tickets }}/{{ flight.total_seats }}</td>
+                    <td>
+                        <a href="{{ url_for('staff_passengers', flight_num=flight.flight_num, departure_time=flight.departure_time) }}" class="btn btn-sm btn-secondary">Passengers</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p class="text-center">No upcoming flights in the next 30 days.</p>
+    {% endif %}
+</div>
+
+<div class="grid-3 mt-3">
+    <a href="{{ url_for('staff_flights') }}" class="card text-center" style="text-decoration: none; color: inherit;">
+        <div style="font-size: 2rem;">🛫</div>
+        <h3>View All Flights</h3>
+        <p>Search and manage flights</p>
+    </a>
+    <a href="{{ url_for('staff_analytics') }}" class="card text-center" style="text-decoration: none; color: inherit;">
+        <div style="font-size: 2rem;">📊</div>
+        <h3>Analytics</h3>
+        <p>View performance reports</p>
+    </a>
+    {% if 'Admin' in permissions %}
+    <a href="{{ url_for('staff_add_flight') }}" class="card text-center" style="text-decoration: none; color: inherit;">
+        <div style="font-size: 2rem;">➕</div>
+        <h3>Add Flight</h3>
+        <p>Create new flights</p>
+    </a>
+    {% else %}
+    <a href="{{ url_for('staff_customer_flights') }}" class="card text-center" style="text-decoration: none; color: inherit;">
+        <div style="font-size: 2rem;">🔍</div>
+        <h3>Customer Lookup</h3>
+        <p>Find customer flights</p>
+    </a>
+    {% endif %}
+</div>
+{% endblock %}

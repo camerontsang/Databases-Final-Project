@@ -1,0 +1,57 @@
+{% extends 'layout.html' %}
+
+{% block title %}Customer Lookup - Air Ticket System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="card-header">🔍 Customer Flight Lookup</h2>
+    
+    <form method="POST" action="{{ url_for('staff_customer_flights') }}">
+        <div class="form-group">
+            <label for="customer_email">Customer Email</label>
+            <input type="email" name="customer_email" id="customer_email" class="form-control" 
+                   required placeholder="Enter customer email" value="{{ customer_email or '' }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+</div>
+
+{% if customer_email %}
+<div class="card">
+    <h3 class="card-header">Flights for {{ customer_email }} ({{ flights|length }} found)</h3>
+    
+    {% if flights %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Ticket #</th>
+                    <th>Flight</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Departure</th>
+                    <th>Status</th>
+                    <th>Purchase Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for flight in flights %}
+                <tr>
+                    <td>{{ flight.ticket_id }}</td>
+                    <td>{{ flight.flight_num }}</td>
+                    <td>{{ flight.departure_airport }}<br><small>{{ flight.departure_city }}</small></td>
+                    <td>{{ flight.arrival_airport }}<br><small>{{ flight.arrival_city }}</small></td>
+                    <td>{{ flight.departure_time.strftime('%b %d, %Y %H:%M') }}</td>
+                    <td><span class="badge badge-{{ flight.status|lower|replace(' ', '-') }}">{{ flight.status }}</span></td>
+                    <td>{{ flight.purchase_date.strftime('%b %d, %Y') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p class="text-center">No flights found for this customer on {{ airline }}.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

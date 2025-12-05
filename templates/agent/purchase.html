@@ -1,0 +1,89 @@
+{% extends 'layout.html' %}
+
+{% block title %}Purchase for Customer - Air Ticket System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="card-header">🎫 Book Flight for Customer</h2>
+    
+    {% if airlines %}
+    <p class="mb-2">You are authorized to book for: <strong>{{ airlines|join(', ') }}</strong></p>
+    {% else %}
+    <div class="alert alert-error">
+        You are not authorized to book for any airlines yet. Please contact an airline administrator.
+    </div>
+    {% endif %}
+    
+    <form method="POST" action="{{ url_for('agent_purchase') }}">
+        <input type="hidden" name="search" value="1">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="source">From (City or Airport)</label>
+                <input type="text" name="source" id="source" class="form-control" placeholder="e.g., New York or JFK">
+            </div>
+            <div class="form-group">
+                <label for="destination">To (City or Airport)</label>
+                <input type="text" name="destination" id="destination" class="form-control" placeholder="e.g., Los Angeles or LAX">
+            </div>
+            <div class="form-group">
+                <label for="departure_date">Departure Date</label>
+                <input type="date" name="departure_date" id="departure_date" class="form-control">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary" {% if not airlines %}disabled{% endif %}>Search Flights</button>
+    </form>
+</div>
+
+{% if flights %}
+<div class="card">
+    <h3 class="card-header">Available Flights ({{ flights|length }} found)</h3>
+    
+    {% for flight in flights %}
+    <div class="flight-card">
+        <div class="flight-route">
+            <div class="flight-city">
+                <div class="flight-city-code">{{ flight.departure_airport }}</div>
+                <div class="flight-city-name">{{ flight.departure_city }}</div>
+            </div>
+            <div class="flight-arrow">→</div>
+            <div class="flight-city">
+                <div class="flight-city-code">{{ flight.arrival_airport }}</div>
+                <div class="flight-city-name">{{ flight.arrival_city }}</div>
+            </div>
+        </div>
+        
+        <div class="flight-details">
+            <div class="flight-info">
+                <div class="flight-info-label">Airline</div>
+                <div class="flight-info-value">{{ flight.airline_name }}</div>
+            </div>
+            <div class="flight-info">
+                <div class="flight-info-label">Flight</div>
+                <div class="flight-info-value">{{ flight.flight_num }}</div>
+            </div>
+            <div class="flight-info">
+                <div class="flight-info-label">Departure</div>
+                <div class="flight-info-value">{{ flight.departure_time.strftime('%b %d, %H:%M') }}</div>
+            </div>
+            <div class="flight-info">
+                <div class="flight-info-label">Seats Left</div>
+                <div class="flight-info-value">{{ flight.available_seats }}</div>
+            </div>
+        </div>
+        
+        <div style="text-align: right;">
+            <div class="flight-price">${{ "%.2f"|format(flight.price) }}</div>
+            {% if flight.available_seats > 0 %}
+            <form method="POST" action="{{ url_for('agent_purchase_ticket', airline=flight.airline_name, flight_num=flight.flight_num, departure_time=flight.departure_time) }}" style="margin-top: 0.5rem;">
+                <input type="email" name="customer_email" class="form-control" placeholder="Customer email" required style="width: 200px; display: inline-block; margin-right: 0.5rem;">
+                <button type="submit" class="btn btn-success btn-sm">Book</button>
+            </form>
+            {% else %}
+            <button class="btn btn-secondary btn-sm mt-1" disabled>Sold Out</button>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

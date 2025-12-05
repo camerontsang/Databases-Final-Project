@@ -1,0 +1,132 @@
+{% extends 'layout.html' %}
+
+{% block title %}Analytics - Air Ticket System{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">📊 Performance Analytics</h1>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ commission_stats.ticket_count }}</div>
+        <div class="stat-label">Tickets Sold (30 days)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">${{ "%.2f"|format(commission_stats.total_commission) }}</div>
+        <div class="stat-label">Total Commission (30 days)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">${{ "%.2f"|format(commission_stats.avg_commission) }}</div>
+        <div class="stat-label">Avg Commission per Ticket</div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="chart-container">
+        <div class="chart-title">Top 5 Customers by Tickets (Last 6 Months)</div>
+        <canvas id="ticketsChart"></canvas>
+        {% if not top_customers_tickets %}
+        <p class="text-center mt-2">No data available</p>
+        {% endif %}
+    </div>
+    
+    <div class="chart-container">
+        <div class="chart-title">Top 5 Customers by Commission (Last Year)</div>
+        <canvas id="commissionChart"></canvas>
+        {% if not top_customers_commission %}
+        <p class="text-center mt-2">No data available</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid-2 mt-3">
+    <div class="card">
+        <h3 class="card-header">Top Customers by Tickets</h3>
+        {% if top_customers_tickets %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Tickets</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in top_customers_tickets %}
+                <tr>
+                    <td>{{ customer.customer_email }}</td>
+                    <td>{{ customer.ticket_count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-center">No data available</p>
+        {% endif %}
+    </div>
+    
+    <div class="card">
+        <h3 class="card-header">Top Customers by Commission</h3>
+        {% if top_customers_commission %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Commission</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in top_customers_commission %}
+                <tr>
+                    <td>{{ customer.customer_email }}</td>
+                    <td>${{ "%.2f"|format(customer.commission) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-center">No data available</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Tickets Chart
+const ticketsCtx = document.getElementById('ticketsChart').getContext('2d');
+new Chart(ticketsCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for c in top_customers_tickets %}'{{ c.customer_email[:20] }}...'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Tickets',
+            data: [{% for c in top_customers_tickets %}{{ c.ticket_count }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(30, 60, 114, 0.8)'
+        }]
+    },
+    options: {
+        responsive: true,
+        indexAxis: 'y',
+        plugins: { legend: { display: false } }
+    }
+});
+
+// Commission Chart
+const commissionCtx = document.getElementById('commissionChart').getContext('2d');
+new Chart(commissionCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for c in top_customers_commission %}'{{ c.customer_email[:20] }}...'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Commission ($)',
+            data: [{% for c in top_customers_commission %}{{ c.commission }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(40, 167, 69, 0.8)'
+        }]
+    },
+    options: {
+        responsive: true,
+        indexAxis: 'y',
+        plugins: { legend: { display: false } }
+    }
+});
+</script>
+{% endblock %}

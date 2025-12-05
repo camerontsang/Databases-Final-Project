@@ -1,0 +1,67 @@
+{% extends 'layout.html' %}
+
+{% block title %}Login - Air Ticket System{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="card">
+        <h2 class="card-header text-center">Login</h2>
+        
+        <form method="POST" action="{{ url_for('login') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="form-group">
+                <label>Login As:</label>
+                <div class="auth-tabs">
+                    <button type="button" class="auth-tab active" data-type="customer">Customer</button>
+                    <button type="button" class="auth-tab" data-type="agent">Booking Agent</button>
+                    <button type="button" class="auth-tab" data-type="staff">Airline Staff</button>
+                </div>
+                <input type="hidden" name="user_type" id="user_type" value="customer">
+            </div>
+            
+            <div class="form-group">
+                <label for="username" id="username_label">Email</label>
+                <input type="text" name="username" id="username" class="form-control" required 
+                       placeholder="Enter your email">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" name="password" id="password" class="form-control" required
+                       placeholder="Enter your password">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Login</button>
+        </form>
+        
+        <p class="text-center mt-3">
+            Don't have an account? <a href="{{ url_for('register_select') }}">Register here</a>
+        </p>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.auth-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        
+        const type = this.dataset.type;
+        document.getElementById('user_type').value = type;
+        
+        const label = document.getElementById('username_label');
+        const input = document.getElementById('username');
+        
+        if (type === 'staff') {
+            label.textContent = 'Username';
+            input.placeholder = 'Enter your username';
+            input.type = 'text';
+        } else {
+            label.textContent = 'Email';
+            input.placeholder = 'Enter your email';
+            input.type = 'email';
+        }
+    });
+});
+</script>
+{% endblock %}
