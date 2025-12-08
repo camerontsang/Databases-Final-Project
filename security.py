@@ -174,16 +174,16 @@ def validate_date(date_str):
 def validate_datetime(datetime_str):
     """
     Validate datetime format (YYYY-MM-DD HH:MM:SS or YYYY-MM-DD HH:MM).
-    
+
     Args:
         datetime_str: Datetime string to validate
-    
+
     Returns:
         True if valid datetime format, False otherwise
     """
     if not datetime_str:
         return False
-    
+
     formats = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M']
     for fmt in formats:
         try:
@@ -194,23 +194,13 @@ def validate_datetime(datetime_str):
     return False
 
 
-def validate_time(time_str):
-    """
-    Validate time format (HH:MM or HH:MM:SS).
-    """
-    if not time_str:
-        return False
-    patterns = [r'^\d{2}:\d{2}$', r'^\d{2}:\d{2}:\d{2}$']
-    return any(re.match(p, time_str) for p in patterns)
-
-
 def validate_positive_int(value):
     """
     Check if value is a positive integer.
-    
+
     Args:
         value: Value to check
-    
+
     Returns:
         True if positive integer, False otherwise
     """
@@ -218,57 +208,6 @@ def validate_positive_int(value):
         return int(value) > 0
     except (ValueError, TypeError):
         return False
-
-
-def validate_non_negative_float(value):
-    """
-    Check if value is a non-negative number.
-    """
-    try:
-        return float(value) >= 0
-    except (ValueError, TypeError):
-        return False
-
-
-def validate_phone(phone):
-    """
-    Validate phone number format (allows various formats).
-    """
-    if not phone:
-        return False
-    # Remove common separators
-    cleaned = re.sub(r'[\s\-\(\)\.]', '', phone)
-    # Check if remaining is digits and reasonable length
-    return cleaned.isdigit() and 7 <= len(cleaned) <= 15
-
-
-def validate_alphanumeric(value, allow_spaces=False, allow_underscore=False):
-    """
-    Check if value contains only alphanumeric characters.
-    """
-    if not value:
-        return False
-    pattern = r'^[a-zA-Z0-9'
-    if allow_spaces:
-        pattern += r'\s'
-    if allow_underscore:
-        pattern += r'_'
-    pattern += r']+$'
-    return re.match(pattern, value) is not None
-
-
-def validate_in_list(value, allowed_values):
-    """
-    Check if value is in a list of allowed values.
-    
-    Args:
-        value: Value to check
-        allowed_values: List of allowed values
-    
-    Returns:
-        True if value is in allowed_values, False otherwise
-    """
-    return value in allowed_values
 
 
 # ========== FLIGHT STATUS VALIDATION ==========

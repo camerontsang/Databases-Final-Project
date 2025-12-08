@@ -1,6 +1,11 @@
 """
 Database Configuration and Connection Handler
 Air Ticket Reservation System
+
+SECURITY NOTE: This file contains database credentials and Flask secret key.
+- For local development and academic projects only
+- DO NOT commit to public repositories
+- In production, use environment variables instead
 """
 
 import pymysql
@@ -17,7 +22,9 @@ DB_CONFIG = {
 }
 
 # Flask app configuration
-SECRET_KEY = 'change-this-to-a-very-long-random-string-in-production'
+# NOTE: This is a randomly generated key for local development.
+# For production deployment, use: os.environ.get('SECRET_KEY')
+SECRET_KEY = '23f38496712de7e269fa0a29eec10f1fa57e8903a6bcd67c0824d5542edf03af'
 
 
 def get_db_connection():

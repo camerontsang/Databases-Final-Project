@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="card">
-    <h2 class="card-header">🛫 All Flights - {{ airline }}</h2>
+    <h2 class="card-header">All Flights - {{ airline }}</h2>
     
     <form method="POST" action="{{ url_for('staff_flights') }}">
         <div class="form-row">
@@ -60,7 +60,7 @@
                     <td><span class="badge badge-{{ flight.status|lower|replace(' ', '-') }}">{{ flight.status }}</span></td>
                     <td>
                         <a href="{{ url_for('staff_passengers', flight_num=flight.flight_num, departure_time=flight.departure_time) }}" class="btn btn-sm btn-secondary">Passengers</a>
-                        {% if 'Operator' in permissions %}
+                        {% if 'Staff' in permissions or 'Operator' in permissions %}
                         <form method="POST" action="{{ url_for('staff_update_status') }}" style="display: inline; margin-left: 0.5rem;">
                             <input type="hidden" name="flight_num" value="{{ flight.flight_num }}">
                             <input type="hidden" name="departure_time" value="{{ flight.departure_time }}">

@@ -1,132 +1,144 @@
 {% extends 'layout.html' %}
 
-{% block title %}Analytics - Air Ticket System{% endblock %}
+{% block title %}Agent Analytics - Air Ticket System{% endblock %}
 
 {% block content %}
-<h1 class="mb-3">📊 Performance Analytics</h1>
+<div class="card">
+    <h2 class="card-header">Agent Analytics</h2>
 
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-value">{{ commission_stats.ticket_count }}</div>
-        <div class="stat-label">Tickets Sold (30 days)</div>
+    <!-- Commission Stats (Last 30 Days) -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">${{ "%.2f"|format(total_commission) }}</div>
+            <div class="stat-label">Total Commission (30 Days)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ tickets_sold }}</div>
+            <div class="stat-label">Tickets Sold (30 Days)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${{ "%.2f"|format(avg_commission) }}</div>
+            <div class="stat-label">Avg Commission per Ticket</div>
+        </div>
     </div>
-    <div class="stat-card">
-        <div class="stat-value">${{ "%.2f"|format(commission_stats.total_commission) }}</div>
-        <div class="stat-label">Total Commission (30 days)</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">${{ "%.2f"|format(commission_stats.avg_commission) }}</div>
-        <div class="stat-label">Avg Commission per Ticket</div>
-    </div>
-</div>
 
-<div class="grid-2">
+    <!-- Commission Chart -->
+    {% if chart_labels %}
     <div class="chart-container">
-        <div class="chart-title">Top 5 Customers by Tickets (Last 6 Months)</div>
-        <canvas id="ticketsChart"></canvas>
-        {% if not top_customers_tickets %}
-        <p class="text-center mt-2">No data available</p>
-        {% endif %}
-    </div>
-    
-    <div class="chart-container">
-        <div class="chart-title">Top 5 Customers by Commission (Last Year)</div>
+        <h3 class="chart-title">Monthly Commission (Last 6 Months)</h3>
         <canvas id="commissionChart"></canvas>
-        {% if not top_customers_commission %}
-        <p class="text-center mt-2">No data available</p>
-        {% endif %}
     </div>
+    {% endif %}
 </div>
 
-<div class="grid-2 mt-3">
-    <div class="card">
-        <h3 class="card-header">Top Customers by Tickets</h3>
-        {% if top_customers_tickets %}
+<!-- Top Customers by Tickets -->
+<div class="card">
+    <h3 class="card-header">Top 5 Customers by Tickets (Last 6 Months)</h3>
+    {% if top_customers_tickets %}
+    <div class="table-container">
         <table>
             <thead>
                 <tr>
-                    <th>Customer</th>
-                    <th>Tickets</th>
+                    <th>Rank</th>
+                    <th>Customer Name</th>
+                    <th>Email</th>
+                    <th>Tickets Purchased</th>
                 </tr>
             </thead>
             <tbody>
                 {% for customer in top_customers_tickets %}
                 <tr>
-                    <td>{{ customer.customer_email }}</td>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ customer.name }}</td>
+                    <td>{{ customer.email }}</td>
                     <td>{{ customer.ticket_count }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-        {% else %}
-        <p class="text-center">No data available</p>
-        {% endif %}
     </div>
-    
-    <div class="card">
-        <h3 class="card-header">Top Customers by Commission</h3>
-        {% if top_customers_commission %}
+    {% else %}
+    <p style="text-align: center; color: #666; padding: 2rem;">No customer data available.</p>
+    {% endif %}
+</div>
+
+<!-- Top Customers by Commission -->
+<div class="card">
+    <h3 class="card-header">Top 5 Customers by Commission (Last Year)</h3>
+    {% if top_customers_commission %}
+    <div class="table-container">
         <table>
             <thead>
                 <tr>
-                    <th>Customer</th>
-                    <th>Commission</th>
+                    <th>Rank</th>
+                    <th>Customer Name</th>
+                    <th>Email</th>
+                    <th>Tickets</th>
+                    <th>Total Commission</th>
                 </tr>
             </thead>
             <tbody>
                 {% for customer in top_customers_commission %}
                 <tr>
-                    <td>{{ customer.customer_email }}</td>
-                    <td>${{ "%.2f"|format(customer.commission) }}</td>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ customer.name }}</td>
+                    <td>{{ customer.email }}</td>
+                    <td>{{ customer.ticket_count }}</td>
+                    <td>${{ "%.2f"|format(customer.total_commission) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-        {% else %}
-        <p class="text-center">No data available</p>
-        {% endif %}
     </div>
+    {% else %}
+    <p style="text-align: center; color: #666; padding: 2rem;">No customer data available.</p>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
+{% if chart_labels %}
 <script>
-// Tickets Chart
-const ticketsCtx = document.getElementById('ticketsChart').getContext('2d');
-new Chart(ticketsCtx, {
+const ctx = document.getElementById('commissionChart').getContext('2d');
+new Chart(ctx, {
     type: 'bar',
     data: {
-        labels: [{% for c in top_customers_tickets %}'{{ c.customer_email[:20] }}...'{% if not loop.last %}, {% endif %}{% endfor %}],
-        datasets: [{
-            label: 'Tickets',
-            data: [{% for c in top_customers_tickets %}{{ c.ticket_count }}{% if not loop.last %}, {% endif %}{% endfor %}],
-            backgroundColor: 'rgba(30, 60, 114, 0.8)'
-        }]
-    },
-    options: {
-        responsive: true,
-        indexAxis: 'y',
-        plugins: { legend: { display: false } }
-    }
-});
-
-// Commission Chart
-const commissionCtx = document.getElementById('commissionChart').getContext('2d');
-new Chart(commissionCtx, {
-    type: 'bar',
-    data: {
-        labels: [{% for c in top_customers_commission %}'{{ c.customer_email[:20] }}...'{% if not loop.last %}, {% endif %}{% endfor %}],
+        labels: {{ chart_labels|tojson }},
         datasets: [{
             label: 'Commission ($)',
-            data: [{% for c in top_customers_commission %}{{ c.commission }}{% if not loop.last %}, {% endif %}{% endfor %}],
-            backgroundColor: 'rgba(40, 167, 69, 0.8)'
+            data: {{ chart_data|tojson }},
+            backgroundColor: 'rgba(40, 167, 69, 0.6)',
+            borderColor: 'rgba(40, 167, 69, 1)',
+            borderWidth: 2
         }]
     },
     options: {
         responsive: true,
-        indexAxis: 'y',
-        plugins: { legend: { display: false } }
+        maintainAspectRatio: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toFixed(2);
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'Commission: $' + context.parsed.y.toFixed(2);
+                    }
+                }
+            }
+        }
     }
 });
 </script>
+{% endif %}
 {% endblock %}

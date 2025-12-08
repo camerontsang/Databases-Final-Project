@@ -4,83 +4,68 @@
 
 {% block content %}
 <div class="card">
-    <h2 class="card-header">📊 Spending Analytics</h2>
-    
-    <form method="POST" action="{{ url_for('customer_spending') }}">
+    <h2 class="card-header">My Spending</h2>
+
+    <!-- Date Range Filter -->
+    <form method="GET" action="{{ url_for('customer_spending') }}" style="margin-bottom: 2rem;">
         <div class="form-row">
             <div class="form-group">
-                <label for="start_date">From Date</label>
-                <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
+                <label for="start_date">Start Date</label>
+                <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}" required>
             </div>
             <div class="form-group">
-                <label for="end_date">To Date</label>
-                <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
+                <label for="end_date">End Date</label>
+                <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}" required>
+            </div>
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Filter</button>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary">Update</button>
     </form>
-</div>
 
-<div class="stats-grid">
-    <div class="stat-card">
+    <!-- Total Spending -->
+    <div class="stat-card" style="text-align: center; margin-bottom: 2rem; padding: 2rem;">
+        <div class="stat-label">Total Spending - {{ period_label }}</div>
         <div class="stat-value">${{ "%.2f"|format(total_spending) }}</div>
-        <div class="stat-label">Total Spending</div>
     </div>
-</div>
 
-<div class="chart-container">
-    <div class="chart-title">Monthly Spending</div>
-    <canvas id="spendingChart" height="100"></canvas>
-</div>
-
-{% if monthly_spending %}
-<div class="card">
-    <h3 class="card-header">Monthly Breakdown</h3>
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Month</th>
-                    <th>Spending</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in monthly_spending %}
-                <tr>
-                    <td>{{ item.month }}</td>
-                    <td>${{ "%.2f"|format(item.total) }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Spending Chart -->
+    {% if chart_labels %}
+    <div class="chart-container">
+        <h3 class="chart-title">Monthly Spending</h3>
+        <canvas id="spendingChart"></canvas>
     </div>
+    {% else %}
+    <p style="text-align: center; color: #666;">No spending data available for this period.</p>
+    {% endif %}
 </div>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}
+{% if chart_labels %}
 <script>
 const ctx = document.getElementById('spendingChart').getContext('2d');
 new Chart(ctx, {
     type: 'bar',
     data: {
-        labels: [{% for item in monthly_spending %}'{{ item.month }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        labels: {{ chart_labels|tojson }},
         datasets: [{
             label: 'Spending ($)',
-            data: [{% for item in monthly_spending %}{{ item.total }}{% if not loop.last %}, {% endif %}{% endfor %}],
-            backgroundColor: 'rgba(30, 60, 114, 0.8)',
-            borderColor: 'rgba(30, 60, 114, 1)',
-            borderWidth: 1
+            data: {{ chart_data|tojson }},
+            backgroundColor: 'rgba(42, 82, 152, 0.6)',
+            borderColor: 'rgba(42, 82, 152, 1)',
+            borderWidth: 2
         }]
     },
     options: {
         responsive: true,
+        maintainAspectRatio: true,
         scales: {
             y: {
                 beginAtZero: true,
                 ticks: {
                     callback: function(value) {
-                        return '$' + value;
+                        return '$' + value.toFixed(2);
                     }
                 }
             }
@@ -88,9 +73,17 @@ new Chart(ctx, {
         plugins: {
             legend: {
                 display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'Spending: $' + context.parsed.y.toFixed(2);
+                    }
+                }
             }
         }
     }
 });
 </script>
+{% endif %}
 {% endblock %}

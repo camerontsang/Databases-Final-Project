@@ -68,20 +68,22 @@ def staff_required(f):
 
 def admin_required(f):
     """
-    Ensure the logged-in staff member has Admin permission.
+    Ensure the logged-in staff member has Admin or Staff permission.
     Must be used after @staff_required.
-    
+
     Admin can: Add airports, airplanes, create flights, associate booking agents.
+    Staff permission: Has all Admin + Operator capabilities (highest level).
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get('user_type') != 'staff':
             flash('Access denied. Staff account required.', 'error')
             return redirect(url_for('index'))
-        
+
         permissions = session.get('permissions', [])
-        if 'Admin' not in permissions:
-            flash('Access denied. Admin permission required.', 'error')
+        # Staff permission grants all access, otherwise need Admin permission
+        if 'Staff' not in permissions and 'Admin' not in permissions:
+            flash('Access denied. Admin or Staff permission required.', 'error')
             return redirect(url_for('staff_home'))
         return f(*args, **kwargs)
     return decorated_function
@@ -89,38 +91,22 @@ def admin_required(f):
 
 def operator_required(f):
     """
-    Ensure the logged-in staff member has Operator permission.
+    Ensure the logged-in staff member has Operator or Staff permission.
     Must be used after @staff_required.
-    
+
     Operator can: Update flight status.
+    Staff permission: Has all Admin + Operator capabilities (highest level).
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get('user_type') != 'staff':
             flash('Access denied. Staff account required.', 'error')
             return redirect(url_for('index'))
-        
-        permissions = session.get('permissions', [])
-        if 'Operator' not in permissions:
-            flash('Access denied. Operator permission required.', 'error')
-            return redirect(url_for('staff_home'))
-        return f(*args, **kwargs)
-    return decorated_function
 
-
-def admin_or_operator_required(f):
-    """
-    Ensure the logged-in staff member has either Admin or Operator permission.
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if session.get('user_type') != 'staff':
-            flash('Access denied. Staff account required.', 'error')
-            return redirect(url_for('index'))
-        
         permissions = session.get('permissions', [])
-        if 'Admin' not in permissions and 'Operator' not in permissions:
-            flash('Access denied. Admin or Operator permission required.', 'error')
+        # Staff permission grants all access, otherwise need Operator permission
+        if 'Staff' not in permissions and 'Operator' not in permissions:
+            flash('Access denied. Operator or Staff permission required.', 'error')
             return redirect(url_for('staff_home'))
         return f(*args, **kwargs)
     return decorated_function

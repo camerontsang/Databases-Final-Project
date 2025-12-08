@@ -8,7 +8,6 @@
         <h2 class="card-header text-center">Login</h2>
         
         <form method="POST" action="{{ url_for('login') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="form-group">
                 <label>Login As:</label>
                 <div class="auth-tabs">

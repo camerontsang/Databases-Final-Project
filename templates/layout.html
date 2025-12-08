@@ -11,7 +11,7 @@
 <body>
     <nav class="navbar">
         <div class="nav-brand">
-            <a href="{{ url_for('index') }}">✈️ Air Ticket System</a>
+            <a href="{{ url_for('index') }}">Air Ticket System</a>
         </div>
         <div class="nav-links">
             {% if logged_in %}
@@ -19,7 +19,7 @@
                     <a href="{{ url_for('customer_home') }}">Home</a>
                     <a href="{{ url_for('customer_my_flights') }}">My Flights</a>
                     <a href="{{ url_for('customer_purchase') }}">Purchase</a>
-                    <a href="{{ url_for('customer_spending') }}">Spending</a>
+                    <a href="{{ url_for('customer_spending') }}">My Spending</a>
                 {% elif user_type == 'agent' %}
                     <a href="{{ url_for('agent_home') }}">Home</a>
                     <a href="{{ url_for('agent_my_bookings') }}">Bookings</a>
@@ -30,7 +30,7 @@
                     <a href="{{ url_for('staff_flights') }}">Flights</a>
                     <a href="{{ url_for('staff_customer_flights') }}">Customer Lookup</a>
                     <a href="{{ url_for('staff_analytics') }}">Analytics</a>
-                    {% if 'Admin' in permissions %}
+                    {% if 'Staff' in permissions or 'Admin' in permissions %}
                         <a href="{{ url_for('staff_add_flight') }}">Add Flight</a>
                         <a href="{{ url_for('staff_add_airplane') }}">Add Airplane</a>
                         <a href="{{ url_for('staff_add_airport') }}">Add Airport</a>

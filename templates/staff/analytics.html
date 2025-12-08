@@ -1,203 +1,210 @@
 {% extends 'layout.html' %}
 
-{% block title %}Analytics - Air Ticket System{% endblock %}
+{% block title %}Staff Analytics - Air Ticket System{% endblock %}
 
 {% block content %}
-<h1 class="mb-3">📊 Analytics Dashboard - {{ airline }}</h1>
+<div class="card">
+    <h2 class="card-header">Staff Analytics Dashboard</h2>
 
-<!-- Ticket Sales Chart -->
-<div class="chart-container">
-    <div class="chart-title">Monthly Ticket Sales (Last 12 Months)</div>
-    <canvas id="salesChart" height="80"></canvas>
+    <!-- Flight Status Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ "%.1f"|format(on_time_percentage) }}%</div>
+            <div class="stat-label">On-Time Rate</div>
+            <div style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">{{ completed_count }} flights</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ "%.1f"|format(delay_percentage) }}%</div>
+            <div class="stat-label">Delay Rate</div>
+            <div style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">{{ delayed_count }} flights</div>
+        </div>
+        {% if frequent_customer %}
+        <div class="stat-card">
+            <div class="stat-value">{{ frequent_customer.flight_count }}</div>
+            <div class="stat-label">Most Frequent Customer</div>
+            <div style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">{{ frequent_customer.name }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Tickets Sold Chart -->
+    {% if tickets_chart_labels %}
+    <div class="chart-container">
+        <h3 class="chart-title">Tickets Sold per Month (Last Year)</h3>
+        <canvas id="ticketsChart"></canvas>
+    </div>
+    {% endif %}
 </div>
 
-<div class="grid-2">
-    <!-- Top Agents This Month -->
-    <div class="card">
-        <h3 class="card-header">Top Agents - This Month</h3>
-        {% if top_agents_month %}
+<!-- Top Booking Agents by Tickets -->
+<div class="card">
+    <h3 class="card-header">Top 5 Booking Agents by Tickets (Last 30 Days)</h3>
+    {% if top_agents_tickets %}
+    <div class="table-container">
         <table>
             <thead>
-                <tr><th>Agent</th><th>Tickets</th></tr>
+                <tr>
+                    <th>Rank</th>
+                    <th>Agent Email</th>
+                    <th>Agent ID</th>
+                    <th>Tickets Sold</th>
+                </tr>
             </thead>
             <tbody>
-                {% for agent in top_agents_month %}
+                {% for agent in top_agents_tickets %}
                 <tr>
+                    <td>{{ loop.index }}</td>
                     <td>{{ agent.email }}</td>
+                    <td>{{ agent.booking_agent_id }}</td>
                     <td>{{ agent.ticket_count }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-        {% else %}
-        <p class="text-center">No data</p>
-        {% endif %}
     </div>
-    
-    <!-- Top Agents This Year -->
-    <div class="card">
-        <h3 class="card-header">Top Agents - This Year</h3>
-        {% if top_agents_year %}
-        <table>
-            <thead>
-                <tr><th>Agent</th><th>Tickets</th></tr>
-            </thead>
-            <tbody>
-                {% for agent in top_agents_year %}
-                <tr>
-                    <td>{{ agent.email }}</td>
-                    <td>{{ agent.ticket_count }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-center">No data</p>
-        {% endif %}
-    </div>
+    {% else %}
+    <p style="text-align: center; color: #666; padding: 2rem;">No agent data available for last 30 days.</p>
+    {% endif %}
 </div>
 
-<div class="grid-2 mt-3">
-    <!-- Top Agents by Commission -->
-    <div class="card">
-        <h3 class="card-header">Top Agents by Commission (Year)</h3>
-        {% if top_agents_commission %}
+<!-- Top Booking Agents by Commission -->
+<div class="card">
+    <h3 class="card-header">Top 5 Booking Agents by Commission (Last 30 Days)</h3>
+    {% if top_agents_commission %}
+    <div class="table-container">
         <table>
             <thead>
-                <tr><th>Agent</th><th>Commission</th></tr>
+                <tr>
+                    <th>Rank</th>
+                    <th>Agent Email</th>
+                    <th>Agent ID</th>
+                    <th>Tickets</th>
+                    <th>Total Commission</th>
+                </tr>
             </thead>
             <tbody>
                 {% for agent in top_agents_commission %}
                 <tr>
+                    <td>{{ loop.index }}</td>
                     <td>{{ agent.email }}</td>
-                    <td>${{ "%.2f"|format(agent.commission) }}</td>
+                    <td>{{ agent.booking_agent_id }}</td>
+                    <td>{{ agent.ticket_count }}</td>
+                    <td>${{ "%.2f"|format(agent.total_commission) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-        {% else %}
-        <p class="text-center">No data</p>
-        {% endif %}
     </div>
-    
-    <!-- Most Frequent Customer -->
+    {% else %}
+    <p style="text-align: center; color: #666; padding: 2rem;">No agent data available for last 30 days.</p>
+    {% endif %}
+</div>
+
+<!-- Top Destinations -->
+<div class="grid-2">
     <div class="card">
-        <h3 class="card-header">Most Frequent Customer (Year)</h3>
-        {% if frequent_customer %}
-        <div class="stat-card" style="box-shadow: none;">
-            <div class="stat-value">{{ frequent_customer.flight_count }}</div>
-            <div class="stat-label">flights by</div>
-            <p class="mt-2"><strong>{{ frequent_customer.customer_email }}</strong></p>
+        <h3 class="card-header">Top Destinations (Last 3 Months)</h3>
+        {% if top_destinations_3m %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Airport</th>
+                        <th>City</th>
+                        <th>Tickets</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dest in top_destinations_3m %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ dest.arrival_airport }}</td>
+                        <td>{{ dest.city }}</td>
+                        <td>{{ dest.ticket_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
         {% else %}
-        <p class="text-center">No data</p>
+        <p style="text-align: center; color: #666; padding: 2rem;">No destination data available.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3 class="card-header">Top Destinations (Last Year)</h3>
+        {% if top_destinations_year %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Airport</th>
+                        <th>City</th>
+                        <th>Tickets</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dest in top_destinations_year %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ dest.arrival_airport }}</td>
+                        <td>{{ dest.city }}</td>
+                        <td>{{ dest.ticket_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="text-align: center; color: #666; padding: 2rem;">No destination data available.</p>
         {% endif %}
     </div>
 </div>
-
-<div class="grid-2 mt-3">
-    <!-- Top Destinations 3 Months -->
-    <div class="chart-container">
-        <div class="chart-title">Top Destinations (Last 3 Months)</div>
-        <canvas id="destinations3mChart"></canvas>
-    </div>
-    
-    <!-- Top Destinations Year -->
-    <div class="chart-container">
-        <div class="chart-title">Top Destinations (Last Year)</div>
-        <canvas id="destinationsYearChart"></canvas>
-    </div>
-</div>
-
-<!-- Flight Delay Stats -->
-{% if delay_stats and delay_stats.total > 0 %}
-<div class="chart-container mt-3">
-    <div class="chart-title">Flight Performance</div>
-    <div class="grid-3">
-        <div class="stat-card">
-            <div class="stat-value">{{ delay_stats.total }}</div>
-            <div class="stat-label">Total Past Flights</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value" style="color: #28a745;">{{ delay_stats.on_time }}</div>
-            <div class="stat-label">On Time</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value" style="color: #dc3545;">{{ delay_stats.delayed }}</div>
-            <div class="stat-label">Delayed</div>
-        </div>
-    </div>
-    <canvas id="delayChart" height="60" class="mt-3"></canvas>
-</div>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}
+{% if tickets_chart_labels %}
 <script>
-// Monthly Sales Chart
-new Chart(document.getElementById('salesChart').getContext('2d'), {
-    type: 'line',
-    data: {
-        labels: [{% for item in tickets_monthly %}'{{ item.month }}'{% if not loop.last %}, {% endif %}{% endfor %}],
-        datasets: [{
-            label: 'Tickets Sold',
-            data: [{% for item in tickets_monthly %}{{ item.count }}{% if not loop.last %}, {% endif %}{% endfor %}],
-            borderColor: 'rgba(30, 60, 114, 1)',
-            backgroundColor: 'rgba(30, 60, 114, 0.1)',
-            fill: true,
-            tension: 0.3
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
-    }
-});
-
-// Destinations 3 Months Chart
-new Chart(document.getElementById('destinations3mChart').getContext('2d'), {
-    type: 'doughnut',
-    data: {
-        labels: [{% for d in top_destinations_3m %}'{{ d.airport_city }}'{% if not loop.last %}, {% endif %}{% endfor %}],
-        datasets: [{
-            data: [{% for d in top_destinations_3m %}{{ d.count }}{% if not loop.last %}, {% endif %}{% endfor %}],
-            backgroundColor: ['#1e3c72', '#2a5298', '#4a7c59', '#f0ad4e', '#d9534f']
-        }]
-    },
-    options: { responsive: true }
-});
-
-// Destinations Year Chart
-new Chart(document.getElementById('destinationsYearChart').getContext('2d'), {
-    type: 'doughnut',
-    data: {
-        labels: [{% for d in top_destinations_year %}'{{ d.airport_city }}'{% if not loop.last %}, {% endif %}{% endfor %}],
-        datasets: [{
-            data: [{% for d in top_destinations_year %}{{ d.count }}{% if not loop.last %}, {% endif %}{% endfor %}],
-            backgroundColor: ['#1e3c72', '#2a5298', '#4a7c59', '#f0ad4e', '#d9534f']
-        }]
-    },
-    options: { responsive: true }
-});
-
-{% if delay_stats and delay_stats.total > 0 %}
-// Delay Stats Chart
-new Chart(document.getElementById('delayChart').getContext('2d'), {
+const ctx = document.getElementById('ticketsChart').getContext('2d');
+new Chart(ctx, {
     type: 'bar',
     data: {
-        labels: ['On Time', 'Delayed'],
+        labels: {{ tickets_chart_labels|tojson }},
         datasets: [{
-            data: [{{ delay_stats.on_time }}, {{ delay_stats.delayed }}],
-            backgroundColor: ['rgba(40, 167, 69, 0.8)', 'rgba(220, 53, 69, 0.8)']
+            label: 'Tickets Sold',
+            data: {{ tickets_chart_data|tojson }},
+            backgroundColor: 'rgba(30, 60, 114, 0.6)',
+            borderColor: 'rgba(30, 60, 114, 1)',
+            borderWidth: 2
         }]
     },
     options: {
         responsive: true,
-        indexAxis: 'y',
-        plugins: { legend: { display: false } }
+        maintainAspectRatio: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'Tickets: ' + context.parsed.y;
+                    }
+                }
+            }
+        }
     }
 });
-{% endif %}
 </script>
+{% endif %}
 {% endblock %}

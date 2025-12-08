@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="card">
-    <h2 class="card-header">🎫 Search & Purchase Flights</h2>
+    <h2 class="card-header">Search & Purchase Flights</h2>
     
     <form method="POST" action="{{ url_for('customer_purchase') }}">
         <input type="hidden" name="search" value="1">
@@ -66,7 +66,7 @@
         <div style="text-align: right;">
             <div class="flight-price">${{ "%.2f"|format(flight.price) }}</div>
             {% if flight.available_seats > 0 %}
-            <form method="POST" action="{{ url_for('customer_purchase_ticket', airline=flight.airline_name, flight_num=flight.flight_num, departure_time=flight.departure_time) }}" style="display: inline;">
+            <form method="POST" action="{{ url_for('customer_purchase_ticket', airline=flight.airline_name, flight_num=flight.flight_num, departure_time=flight.departure_time.strftime('%Y-%m-%d %H:%M:%S')) }}" style="display: inline;">
                 <button type="submit" class="btn btn-success btn-sm mt-1">Purchase</button>
             </form>
             {% else %}

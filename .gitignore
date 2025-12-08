@@ -1,17 +1,24 @@
-# Python
+# Python cache
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
-*.egg-info/
-dist/
-build/
 
-# Virtual Environment
-venv/
-env/
-ENV/
+# Logs
+logs/
+*.log
+
+# Documentation files (not needed for deployment)
+*.md
+docs/
+
+# Database files (contains sensitive test data)
+*.sql
+
+# Environment files
+.env
+.env.local
 
 # IDE
 .vscode/
@@ -20,29 +27,6 @@ ENV/
 *.swo
 *~
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
-
-# Logs
-logs/*.log
-
-# Backups
-*.backup
-*.bak
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Environment variables
-.env
-.env.local
-
-# Flask
-instance/
-.webassets-cache
-
-# Claude Code
-.claude/

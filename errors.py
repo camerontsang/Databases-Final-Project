@@ -29,15 +29,6 @@ VALIDATION_ERRORS = {
     'negative_number': '{field} cannot be negative.',
 }
 
-# Database Errors
-DATABASE_ERRORS = {
-    'duplicate_entry': '{entity} already exists.',
-    'not_found': '{entity} not found.',
-    'foreign_key_constraint': 'Cannot complete operation due to existing dependencies.',
-    'connection_failed': 'Database connection failed. Please try again later.',
-    'query_failed': 'Operation failed. Please try again.',
-}
-
 # Business Logic Errors
 BUSINESS_ERRORS = {
     'flight_full': 'Sorry, this flight is fully booked.',
@@ -46,17 +37,6 @@ BUSINESS_ERRORS = {
     'same_airports': 'Departure and arrival airports must be different.',
     'insufficient_seats': 'Not enough seats available.',
     'already_purchased': 'You have already purchased a ticket for this flight.',
-}
-
-# Authorization Errors
-AUTHORIZATION_ERRORS = {
-    'access_denied': 'Access denied. You do not have permission to perform this action.',
-    'customer_required': 'Access denied. Customer account required.',
-    'agent_required': 'Access denied. Booking agent account required.',
-    'staff_required': 'Access denied. Airline staff account required.',
-    'admin_required': 'Access denied. Admin permission required.',
-    'operator_required': 'Access denied. Operator permission required.',
-    'not_authorized_airline': 'You are not authorized to perform this action for this airline.',
 }
 
 # Success Messages
@@ -71,14 +51,6 @@ SUCCESS_MESSAGES = {
     'agent_associated': 'Booking agent associated successfully!',
     'status_updated': 'Flight status updated successfully.',
     'profile_updated': 'Profile updated successfully.',
-}
-
-# Generic Messages
-GENERIC_MESSAGES = {
-    'no_results': 'No {entity} found matching your criteria.',
-    'try_again': 'Please try again.',
-    'contact_support': 'If the problem persists, please contact support.',
-    'search_hint': 'Try adjusting your search criteria.',
 }
 
 
@@ -116,8 +88,7 @@ def format_error(error_key, **kwargs):
         Formatted error message
     """
     # Search through all error dictionaries
-    for error_dict in [AUTH_ERRORS, VALIDATION_ERRORS, DATABASE_ERRORS,
-                       BUSINESS_ERRORS, AUTHORIZATION_ERRORS, GENERIC_MESSAGES]:
+    for error_dict in [AUTH_ERRORS, VALIDATION_ERRORS, BUSINESS_ERRORS]:
         if error_key in error_dict:
             return error_dict[error_key].format(**kwargs)
 

@@ -14,7 +14,7 @@
 </div>
 
 <div class="card">
-    <h2 class="card-header">✈️ Upcoming Flights (Next 30 Days)</h2>
+    <h2 class="card-header">Upcoming Flights (Next 30 Days)</h2>
     
     {% if flights %}
     <div class="table-container">
@@ -52,16 +52,10 @@
     {% endif %}
 </div>
 
-<div class="grid-3 mt-3">
+<div class="grid-2 mt-3">
     <a href="{{ url_for('staff_flights') }}" class="card text-center" style="text-decoration: none; color: inherit;">
-        <div style="font-size: 2rem;">🛫</div>
         <h3>View All Flights</h3>
         <p>Search and manage flights</p>
-    </a>
-    <a href="{{ url_for('staff_analytics') }}" class="card text-center" style="text-decoration: none; color: inherit;">
-        <div style="font-size: 2rem;">📊</div>
-        <h3>Analytics</h3>
-        <p>View performance reports</p>
     </a>
     {% if 'Admin' in permissions %}
     <a href="{{ url_for('staff_add_flight') }}" class="card text-center" style="text-decoration: none; color: inherit;">

@@ -3,7 +3,7 @@ Air Ticket Reservation System - Main Application
 CSCI-SHU 213 Project Part 3
 
 This Flask application implements a secure air ticket reservation system
-with four user types: Public, Customer, Booking Agent, and Airline Staff.
+with three user types: Customer, Booking Agent, and Airline Staff.
 """
 
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
@@ -25,18 +25,12 @@ from errors import (
 )
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 
 # Setup logging
 setup_logging(app)
-
-# Setup CSRF protection (disabled by default - enable after updating templates)
-# To enable: Set WTF_CSRF_ENABLED = True and add csrf_token() to all forms
-app.config['WTF_CSRF_ENABLED'] = False  # Temporarily disabled
-csrf = CSRFProtect(app)
 
 # Setup rate limiting
 limiter = Limiter(
@@ -47,7 +41,7 @@ limiter = Limiter(
     strategy="fixed-window"
 )
 
-app.logger.info('Application initialized with CSRF protection disabled (update templates to enable)')
+app.logger.info('Application initialized')
 
 # ============================================================================
 # CONTEXT PROCESSORS - Make variables available to all templates
@@ -477,13 +471,14 @@ def customer_home():
     """Customer home - show upcoming flights"""
     flights = execute_query("""
         SELECT f.*, t.ticket_id,
-               a1.airport_city as departure_city,
-               a2.airport_city as arrival_city
+               a1.city as departure_city,
+               a2.city as arrival_city
         FROM flight f
-        JOIN ticket t ON f.airline_name = t.airline_name AND f.flight_num = t.flight_num
+        JOIN airline al ON f.airline_id = al.airline_id
+        JOIN ticket t ON al.airline_name = t.airline_name AND f.flight_num = t.flight_num
         JOIN purchases p ON t.ticket_id = p.ticket_id
-        JOIN airport a1 ON f.departure_airport = a1.airport_name
-        JOIN airport a2 ON f.arrival_airport = a2.airport_name
+        JOIN airport a1 ON f.departure_airport = a1.airport_code
+        JOIN airport a2 ON f.arrival_airport = a2.airport_code
         WHERE p.customer_email = %s 
         AND f.departure_time > NOW()
         ORDER BY f.departure_time
@@ -505,14 +500,15 @@ def customer_my_flights():
     
     query = """
         SELECT f.*, t.ticket_id,
-               a1.airport_city as departure_city,
-               a2.airport_city as arrival_city,
+               a1.city as departure_city,
+               a2.city as arrival_city,
                p.purchase_date
         FROM flight f
-        JOIN ticket t ON f.airline_name = t.airline_name AND f.flight_num = t.flight_num
+        JOIN airline al ON f.airline_id = al.airline_id
+        JOIN ticket t ON al.airline_name = t.airline_name AND f.flight_num = t.flight_num
         JOIN purchases p ON t.ticket_id = p.ticket_id
-        JOIN airport a1 ON f.departure_airport = a1.airport_name
-        JOIN airport a2 ON f.arrival_airport = a2.airport_name
+        JOIN airport a1 ON f.departure_airport = a1.airport_code
+        JOIN airport a2 ON f.arrival_airport = a2.airport_code
         WHERE p.customer_email = %s
     """
     params = [session['user']]
@@ -526,11 +522,11 @@ def customer_my_flights():
         params.append(end_date)
     
     if source:
-        query += " AND (f.departure_airport LIKE %s OR a1.airport_city LIKE %s)"
+        query += " AND (f.departure_airport LIKE %s OR a1.city LIKE %s)"
         params.extend([f'%{source}%', f'%{source}%'])
     
     if destination:
-        query += " AND (f.arrival_airport LIKE %s OR a2.airport_city LIKE %s)"
+        query += " AND (f.arrival_airport LIKE %s OR a2.city LIKE %s)"
         params.extend([f'%{destination}%', f'%{destination}%'])
     
     query += " ORDER BY f.departure_time DESC"
@@ -554,28 +550,30 @@ def customer_purchase():
         departure_date = sanitize_string(request.form.get('departure_date'))
         
         query = """
-            SELECT f.*, 
-                   a1.airport_city as departure_city,
-                   a2.airport_city as arrival_city,
+            SELECT f.*,
+                   al.airline_name,
+                   a1.city as departure_city,
+                   a2.city as arrival_city,
                    ap.seats as total_seats,
-                   (SELECT COUNT(*) FROM ticket t2 
-                    WHERE t2.airline_name = f.airline_name 
+                   (SELECT COUNT(*) FROM ticket t2
+                    WHERE t2.airline_name = al.airline_name
                     AND t2.flight_num = f.flight_num) as sold_tickets
             FROM flight f
-            JOIN airport a1 ON f.departure_airport = a1.airport_name
-            JOIN airport a2 ON f.arrival_airport = a2.airport_name
-            JOIN airplane ap ON f.airplane_id = ap.airplane_id AND f.airline_name = ap.airline_name
+            JOIN airline al ON f.airline_id = al.airline_id
+            JOIN airport a1 ON f.departure_airport = a1.airport_code
+            JOIN airport a2 ON f.arrival_airport = a2.airport_code
+            JOIN airplane ap ON f.airplane_id = ap.airplane_id
             WHERE f.status = 'Upcoming'
             AND f.departure_time > NOW()
         """
         params = []
         
         if source:
-            query += " AND (f.departure_airport LIKE %s OR a1.airport_city LIKE %s)"
+            query += " AND (f.departure_airport LIKE %s OR a1.city LIKE %s)"
             params.extend([f'%{source}%', f'%{source}%'])
         
         if destination:
-            query += " AND (f.arrival_airport LIKE %s OR a2.airport_city LIKE %s)"
+            query += " AND (f.arrival_airport LIKE %s OR a2.city LIKE %s)"
             params.extend([f'%{destination}%', f'%{destination}%'])
         
         if departure_date and validate_date(departure_date):
@@ -607,11 +605,12 @@ def customer_purchase_ticket(airline, flight_num, departure_time):
     flight = execute_query("""
         SELECT f.*, ap.seats as total_seats,
                (SELECT COUNT(*) FROM ticket t2
-                WHERE t2.airline_name = f.airline_name
+                WHERE t2.airline_name = al.airline_name
                 AND t2.flight_num = f.flight_num) as sold_tickets
         FROM flight f
-        JOIN airplane ap ON f.airplane_id = ap.airplane_id AND f.airline_name = ap.airline_name
-        WHERE f.airline_name = %s AND f.flight_num = %s AND f.departure_time = %s
+        JOIN airline al ON f.airline_id = al.airline_id
+        JOIN airplane ap ON f.airplane_id = ap.airplane_id
+        WHERE al.airline_name = %s AND f.flight_num = %s AND f.departure_time = %s
         AND f.status = 'Upcoming'
     """, (airline, flight_num, departure_time), fetch_one=True)
 
@@ -625,12 +624,25 @@ def customer_purchase_ticket(airline, flight_num, departure_time):
         flash('Sorry, this flight is fully booked.', 'error')
         return redirect(url_for('customer_purchase'))
 
+    # Get customer_id from email
+    customer = execute_query(
+        "SELECT customer_id FROM customer WHERE email = %s",
+        (session['user'],), fetch_one=True
+    )
+    if not customer:
+        flash('Customer account not found.', 'error')
+        return redirect(url_for('customer_purchase'))
+
+    # Get class_id from form or default to Economy (1)
+    class_id = sanitize_int(request.form.get('class_id'), default=1)
+
     # Create ticket and purchase
     try:
         # Insert ticket
         ticket_id = execute_query(
-            "INSERT INTO ticket (airline_name, flight_num) VALUES (%s, %s)",
-            (airline, flight_num), commit=True
+            """INSERT INTO ticket (airline_name, customer_id, flight_num, class_id, agent_id, purchase_date)
+               VALUES (%s, %s, %s, %s, NULL, NOW())""",
+            (airline, customer['customer_id'], flight_num, class_id), commit=True
         )
 
         # Insert purchase record
@@ -654,52 +666,73 @@ def customer_purchase_ticket(airline, flight_num, departure_time):
     return redirect(url_for('customer_home'))
 
 
-@app.route('/customer/spending', methods=['GET', 'POST'])
+@app.route('/customer/spending')
 @login_required
 @customer_required
 def customer_spending():
-    """View spending analytics"""
-    # Default: last 12 months total
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=365)
-    
-    if request.method == 'POST':
-        custom_start = sanitize_string(request.form.get('start_date'))
-        custom_end = sanitize_string(request.form.get('end_date'))
-        
-        if custom_start and validate_date(custom_start):
-            start_date = datetime.strptime(custom_start, '%Y-%m-%d')
-        if custom_end and validate_date(custom_end):
-            end_date = datetime.strptime(custom_end, '%Y-%m-%d')
-    
-    # Total spending in period
-    total_spending = execute_query("""
-        SELECT COALESCE(SUM(f.price), 0) as total
-        FROM purchases p
-        JOIN ticket t ON p.ticket_id = t.ticket_id
-        JOIN flight f ON t.airline_name = f.airline_name AND t.flight_num = f.flight_num
-        WHERE p.customer_email = %s
-        AND p.purchase_date BETWEEN %s AND %s
-    """, (session['user'], start_date, end_date), fetch_one=True)
-    
-    # Monthly breakdown for chart
-    monthly_spending = execute_query("""
-        SELECT DATE_FORMAT(p.purchase_date, '%%Y-%%m') as month,
-               COALESCE(SUM(f.price), 0) as total
-        FROM purchases p
-        JOIN ticket t ON p.ticket_id = t.ticket_id
-        JOIN flight f ON t.airline_name = f.airline_name AND t.flight_num = f.flight_num
-        WHERE p.customer_email = %s
-        AND p.purchase_date BETWEEN %s AND %s
-        GROUP BY DATE_FORMAT(p.purchase_date, '%%Y-%%m')
-        ORDER BY month
-    """, (session['user'], start_date, end_date))
-    
+    """View spending over time with charts"""
+    from datetime import datetime, timedelta
+    from collections import defaultdict
+
+    # Get customer_id
+    customer = execute_query(
+        "SELECT customer_id FROM customer WHERE email = %s",
+        (session['user'],), fetch_one=True
+    )
+
+    if not customer:
+        flash('Customer account not found.', 'error')
+        return redirect(url_for('customer_home'))
+
+    customer_id = customer['customer_id']
+
+    # Handle custom date range
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    if start_date and end_date:
+        # Custom date range
+        from_date = start_date
+        to_date = end_date
+        period_label = f"{start_date} to {end_date}"
+    else:
+        # Default: last 12 months
+        from_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+        to_date = datetime.now().strftime('%Y-%m-%d')
+        period_label = "Last 12 Months"
+
+    # Get all purchases in the date range
+    purchases = execute_query("""
+        SELECT t.ticket_id, t.purchase_date, f.price,
+               DATE_FORMAT(t.purchase_date, '%%Y-%%m') as month
+        FROM ticket t
+        JOIN flight f ON t.flight_num = f.flight_num
+        JOIN airline al ON f.airline_id = al.airline_id AND t.airline_name = al.airline_name
+        WHERE t.customer_id = %s
+        AND t.purchase_date BETWEEN %s AND %s
+        ORDER BY t.purchase_date
+    """, (customer_id, from_date, to_date))
+
+    # Calculate totals
+    total_spending = sum(p['price'] for p in purchases)
+
+    # Group by month for chart
+    monthly_spending = defaultdict(float)
+    for purchase in purchases:
+        monthly_spending[purchase['month']] += float(purchase['price'])
+
+    # Sort months chronologically
+    sorted_months = sorted(monthly_spending.keys())
+    chart_labels = sorted_months
+    chart_data = [monthly_spending[month] for month in sorted_months]
+
     return render_template('customer/spending.html',
-                         total_spending=total_spending['total'],
-                         monthly_spending=monthly_spending,
-                         start_date=start_date.strftime('%Y-%m-%d'),
-                         end_date=end_date.strftime('%Y-%m-%d'))
+                         total_spending=total_spending,
+                         period_label=period_label,
+                         chart_labels=chart_labels,
+                         chart_data=chart_data,
+                         start_date=start_date or from_date,
+                         end_date=end_date or to_date)
 
 
 # ============================================================================
@@ -714,13 +747,14 @@ def agent_home():
     """Booking agent home - show recent bookings"""
     bookings = execute_query("""
         SELECT f.*, t.ticket_id, p.customer_email, p.purchase_date,
-               a1.airport_city as departure_city,
-               a2.airport_city as arrival_city
+               a1.city as departure_city,
+               a2.city as arrival_city
         FROM flight f
-        JOIN ticket t ON f.airline_name = t.airline_name AND f.flight_num = t.flight_num
+        JOIN airline al ON f.airline_id = al.airline_id
+        JOIN ticket t ON al.airline_name = t.airline_name AND f.flight_num = t.flight_num
         JOIN purchases p ON t.ticket_id = p.ticket_id
-        JOIN airport a1 ON f.departure_airport = a1.airport_name
-        JOIN airport a2 ON f.arrival_airport = a2.airport_name
+        JOIN airport a1 ON f.departure_airport = a1.airport_code
+        JOIN airport a2 ON f.arrival_airport = a2.airport_code
         WHERE p.booking_agent_id = %s
         ORDER BY p.purchase_date DESC
         LIMIT 20
@@ -741,13 +775,14 @@ def agent_my_bookings():
     
     query = """
         SELECT f.*, t.ticket_id, p.customer_email, p.purchase_date,
-               a1.airport_city as departure_city,
-               a2.airport_city as arrival_city
+               a1.city as departure_city,
+               a2.city as arrival_city
         FROM flight f
-        JOIN ticket t ON f.airline_name = t.airline_name AND f.flight_num = t.flight_num
+        JOIN airline al ON f.airline_id = al.airline_id
+        JOIN ticket t ON al.airline_name = t.airline_name AND f.flight_num = t.flight_num
         JOIN purchases p ON t.ticket_id = p.ticket_id
-        JOIN airport a1 ON f.departure_airport = a1.airport_name
-        JOIN airport a2 ON f.arrival_airport = a2.airport_name
+        JOIN airport a1 ON f.departure_airport = a1.airport_code
+        JOIN airport a2 ON f.arrival_airport = a2.airport_code
         WHERE p.booking_agent_id = %s
     """
     params = [session['agent_id']]
@@ -761,11 +796,11 @@ def agent_my_bookings():
         params.append(end_date)
     
     if source:
-        query += " AND (f.departure_airport LIKE %s OR a1.airport_city LIKE %s)"
+        query += " AND (f.departure_airport LIKE %s OR a1.city LIKE %s)"
         params.extend([f'%{source}%', f'%{source}%'])
     
     if destination:
-        query += " AND (f.arrival_airport LIKE %s OR a2.airport_city LIKE %s)"
+        query += " AND (f.arrival_airport LIKE %s OR a2.city LIKE %s)"
         params.extend([f'%{destination}%', f'%{destination}%'])
     
     query += " ORDER BY p.purchase_date DESC"
@@ -800,29 +835,31 @@ def agent_purchase():
             placeholders = ','.join(['%s'] * len(airline_names))
             
             query = f"""
-                SELECT f.*, 
-                       a1.airport_city as departure_city,
-                       a2.airport_city as arrival_city,
+                SELECT f.*,
+                       al.airline_name,
+                       a1.city as departure_city,
+                       a2.city as arrival_city,
                        ap.seats as total_seats,
-                       (SELECT COUNT(*) FROM ticket t2 
-                        WHERE t2.airline_name = f.airline_name 
+                       (SELECT COUNT(*) FROM ticket t2
+                        WHERE t2.airline_name = al.airline_name
                         AND t2.flight_num = f.flight_num) as sold_tickets
                 FROM flight f
-                JOIN airport a1 ON f.departure_airport = a1.airport_name
-                JOIN airport a2 ON f.arrival_airport = a2.airport_name
-                JOIN airplane ap ON f.airplane_id = ap.airplane_id AND f.airline_name = ap.airline_name
+                JOIN airline al ON f.airline_id = al.airline_id
+                JOIN airport a1 ON f.departure_airport = a1.airport_code
+                JOIN airport a2 ON f.arrival_airport = a2.airport_code
+                JOIN airplane ap ON f.airplane_id = ap.airplane_id
                 WHERE f.status = 'Upcoming'
                 AND f.departure_time > NOW()
-                AND f.airline_name IN ({placeholders})
+                AND al.airline_name IN ({placeholders})
             """
             params = list(airline_names)
             
             if source:
-                query += " AND (f.departure_airport LIKE %s OR a1.airport_city LIKE %s)"
+                query += " AND (f.departure_airport LIKE %s OR a1.city LIKE %s)"
                 params.extend([f'%{source}%', f'%{source}%'])
             
             if destination:
-                query += " AND (f.arrival_airport LIKE %s OR a2.airport_city LIKE %s)"
+                query += " AND (f.arrival_airport LIKE %s OR a2.city LIKE %s)"
                 params.extend([f'%{destination}%', f'%{destination}%'])
             
             if departure_date and validate_date(departure_date):
@@ -876,11 +913,12 @@ def agent_purchase_ticket(airline, flight_num, departure_time):
     flight = execute_query("""
         SELECT f.*, ap.seats as total_seats,
                (SELECT COUNT(*) FROM ticket t2 
-                WHERE t2.airline_name = f.airline_name 
+                WHERE t2.airline_name = al.airline_name 
                 AND t2.flight_num = f.flight_num) as sold_tickets
         FROM flight f
-        JOIN airplane ap ON f.airplane_id = ap.airplane_id AND f.airline_name = ap.airline_name
-        WHERE f.airline_name = %s AND f.flight_num = %s AND f.departure_time = %s
+        JOIN airline al ON f.airline_id = al.airline_id
+        JOIN airplane ap ON f.airplane_id = ap.airplane_id
+        WHERE al.airline_name = %s AND f.flight_num = %s AND f.departure_time = %s
         AND f.status = 'Upcoming'
     """, (airline, flight_num, departure_time), fetch_one=True)
     
@@ -892,13 +930,26 @@ def agent_purchase_ticket(airline, flight_num, departure_time):
         flash('Sorry, this flight is fully booked.', 'error')
         return redirect(url_for('agent_purchase'))
     
+    # Get customer_id from email
+    customer = execute_query(
+        "SELECT customer_id FROM customer WHERE email = %s",
+        (customer_email,), fetch_one=True
+    )
+    if not customer:
+        flash('Customer not found.', 'error')
+        return redirect(url_for('agent_purchase'))
+
+    # Get class_id from form or default to Economy (1)
+    class_id = sanitize_int(request.form.get('class_id'), default=1)
+
     # Create ticket and purchase
     try:
         ticket_id = execute_query(
-            "INSERT INTO ticket (airline_name, flight_num) VALUES (%s, %s)",
-            (airline, flight_num), commit=True
+            """INSERT INTO ticket (airline_name, customer_id, flight_num, class_id, agent_id, purchase_date)
+               VALUES (%s, %s, %s, %s, %s, NOW())""",
+            (airline, customer['customer_id'], flight_num, class_id, session['agent_id']), commit=True
         )
-        
+
         execute_query(
             """INSERT INTO purchases (ticket_id, customer_email, booking_agent_id, purchase_date)
                VALUES (%s, %s, %s, NOW())""",
@@ -916,52 +967,86 @@ def agent_purchase_ticket(airline, flight_num, departure_time):
 @login_required
 @agent_required
 def agent_analytics():
-    """View commission and performance analytics"""
+    """View commission and sales analytics"""
+    from datetime import datetime, timedelta
+
+    agent_id = session.get('agent_id')
+
+    # Calculate date ranges
+    now = datetime.now()
+    last_30_days = (now - timedelta(days=30)).strftime('%Y-%m-%d')
+    last_6_months = (now - timedelta(days=180)).strftime('%Y-%m-%d')
+    last_year = (now - timedelta(days=365)).strftime('%Y-%m-%d')
+
     # Commission totals for last 30 days
-    thirty_days_ago = datetime.now() - timedelta(days=30)
-    
-    commission_stats = execute_query("""
-        SELECT 
-            COUNT(*) as ticket_count,
-            COALESCE(SUM(f.price * 0.10), 0) as total_commission,
-            COALESCE(AVG(f.price * 0.10), 0) as avg_commission
-        FROM purchases p
-        JOIN ticket t ON p.ticket_id = t.ticket_id
-        JOIN flight f ON t.airline_name = f.airline_name AND t.flight_num = f.flight_num
-        WHERE p.booking_agent_id = %s
-        AND p.purchase_date >= %s
-    """, (session['agent_id'], thirty_days_ago), fetch_one=True)
-    
+    commission_30_days = execute_query("""
+        SELECT COALESCE(SUM(f.price * 0.10), 0) as total_commission,
+               COUNT(t.ticket_id) as tickets_sold
+        FROM ticket t
+        JOIN flight f ON t.flight_num = f.flight_num
+        JOIN airline al ON f.airline_id = al.airline_id AND t.airline_name = al.airline_name
+        WHERE t.agent_id = %s
+        AND t.purchase_date >= %s
+    """, (agent_id, last_30_days), fetch_one=True)
+
+    total_commission = float(commission_30_days['total_commission'])
+    tickets_sold = commission_30_days['tickets_sold']
+    avg_commission = total_commission / tickets_sold if tickets_sold > 0 else 0
+
     # Top 5 customers by tickets (last 6 months)
-    six_months_ago = datetime.now() - timedelta(days=180)
     top_customers_tickets = execute_query("""
-        SELECT p.customer_email, COUNT(*) as ticket_count
-        FROM purchases p
-        WHERE p.booking_agent_id = %s
-        AND p.purchase_date >= %s
-        GROUP BY p.customer_email
+        SELECT c.name, c.email,
+               COUNT(t.ticket_id) as ticket_count
+        FROM ticket t
+        JOIN customer c ON t.customer_id = c.customer_id
+        WHERE t.agent_id = %s
+        AND t.purchase_date >= %s
+        GROUP BY c.customer_id, c.name, c.email
         ORDER BY ticket_count DESC
         LIMIT 5
-    """, (session['agent_id'], six_months_ago))
-    
+    """, (agent_id, last_6_months))
+
     # Top 5 customers by commission (last year)
-    one_year_ago = datetime.now() - timedelta(days=365)
     top_customers_commission = execute_query("""
-        SELECT p.customer_email, SUM(f.price * 0.10) as commission
-        FROM purchases p
-        JOIN ticket t ON p.ticket_id = t.ticket_id
-        JOIN flight f ON t.airline_name = f.airline_name AND t.flight_num = f.flight_num
-        WHERE p.booking_agent_id = %s
-        AND p.purchase_date >= %s
-        GROUP BY p.customer_email
-        ORDER BY commission DESC
+        SELECT c.name, c.email,
+               SUM(f.price * 0.10) as total_commission,
+               COUNT(t.ticket_id) as ticket_count
+        FROM ticket t
+        JOIN customer c ON t.customer_id = c.customer_id
+        JOIN flight f ON t.flight_num = f.flight_num
+        JOIN airline al ON f.airline_id = al.airline_id AND t.airline_name = al.airline_name
+        WHERE t.agent_id = %s
+        AND t.purchase_date >= %s
+        GROUP BY c.customer_id, c.name, c.email
+        ORDER BY total_commission DESC
         LIMIT 5
-    """, (session['agent_id'], one_year_ago))
-    
+    """, (agent_id, last_year))
+
+    # Monthly commission for last 6 months (for chart)
+    monthly_data = execute_query("""
+        SELECT DATE_FORMAT(t.purchase_date, '%%Y-%%m') as month,
+               SUM(f.price * 0.10) as commission,
+               COUNT(t.ticket_id) as tickets
+        FROM ticket t
+        JOIN flight f ON t.flight_num = f.flight_num
+        JOIN airline al ON f.airline_id = al.airline_id AND t.airline_name = al.airline_name
+        WHERE t.agent_id = %s
+        AND t.purchase_date >= %s
+        GROUP BY month
+        ORDER BY month
+    """, (agent_id, last_6_months))
+
+    chart_labels = [row['month'] for row in monthly_data]
+    chart_data = [float(row['commission']) for row in monthly_data]
+
     return render_template('agent/analytics.html',
-                         commission_stats=commission_stats,
+                         total_commission=total_commission,
+                         tickets_sold=tickets_sold,
+                         avg_commission=avg_commission,
                          top_customers_tickets=top_customers_tickets,
-                         top_customers_commission=top_customers_commission)
+                         top_customers_commission=top_customers_commission,
+                         chart_labels=chart_labels,
+                         chart_data=chart_data)
 
 
 # ============================================================================
@@ -976,17 +1061,18 @@ def staff_home():
     """Staff home - show flights in next 30 days"""
     flights = execute_query("""
         SELECT f.*, 
-               a1.airport_city as departure_city,
-               a2.airport_city as arrival_city,
+               a1.city as departure_city,
+               a2.city as arrival_city,
                ap.seats as total_seats,
                (SELECT COUNT(*) FROM ticket t2 
-                WHERE t2.airline_name = f.airline_name 
+                WHERE t2.airline_name = al.airline_name 
                 AND t2.flight_num = f.flight_num) as sold_tickets
         FROM flight f
-        JOIN airport a1 ON f.departure_airport = a1.airport_name
-        JOIN airport a2 ON f.arrival_airport = a2.airport_name
-        JOIN airplane ap ON f.airplane_id = ap.airplane_id AND f.airline_name = ap.airline_name
-        WHERE f.airline_name = %s
+        JOIN airline al ON f.airline_id = al.airline_id
+        JOIN airport a1 ON f.departure_airport = a1.airport_code
+        JOIN airport a2 ON f.arrival_airport = a2.airport_code
+        JOIN airplane ap ON f.airplane_id = ap.airplane_id
+        WHERE al.airline_name = %s
         AND f.departure_time BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)
         ORDER BY f.departure_time
     """, (session['airline'],))
@@ -1006,12 +1092,13 @@ def staff_flights():
     
     query = """
         SELECT f.*, 
-               a1.airport_city as departure_city,
-               a2.airport_city as arrival_city
+               a1.city as departure_city,
+               a2.city as arrival_city
         FROM flight f
-        JOIN airport a1 ON f.departure_airport = a1.airport_name
-        JOIN airport a2 ON f.arrival_airport = a2.airport_name
-        WHERE f.airline_name = %s
+        JOIN airline al ON f.airline_id = al.airline_id
+        JOIN airport a1 ON f.departure_airport = a1.airport_code
+        JOIN airport a2 ON f.arrival_airport = a2.airport_code
+        WHERE al.airline_name = %s
     """
     params = [session['airline']]
     
@@ -1024,11 +1111,11 @@ def staff_flights():
         params.append(end_date)
     
     if source:
-        query += " AND (f.departure_airport LIKE %s OR a1.airport_city LIKE %s)"
+        query += " AND (f.departure_airport LIKE %s OR a1.city LIKE %s)"
         params.extend([f'%{source}%', f'%{source}%'])
     
     if destination:
-        query += " AND (f.arrival_airport LIKE %s OR a2.airport_city LIKE %s)"
+        query += " AND (f.arrival_airport LIKE %s OR a2.city LIKE %s)"
         params.extend([f'%{destination}%', f'%{destination}%'])
     
     query += " ORDER BY f.departure_time DESC"
@@ -1048,7 +1135,9 @@ def staff_passengers(flight_num, departure_time):
     
     # Verify flight belongs to staff's airline
     flight = execute_query(
-        "SELECT * FROM flight WHERE airline_name = %s AND flight_num = %s AND departure_time = %s",
+        """SELECT f.* FROM flight f
+           JOIN airline al ON f.airline_id = al.airline_id
+           WHERE al.airline_name = %s AND f.flight_num = %s AND f.departure_time = %s""",
         (session['airline'], flight_num, departure_time), fetch_one=True
     )
     
@@ -1081,15 +1170,16 @@ def staff_customer_flights():
         if customer_email and validate_email(customer_email):
             flights = execute_query("""
                 SELECT f.*, t.ticket_id, p.purchase_date,
-                       a1.airport_city as departure_city,
-                       a2.airport_city as arrival_city
+                       a1.city as departure_city,
+                       a2.city as arrival_city
                 FROM flight f
-                JOIN ticket t ON f.airline_name = t.airline_name AND f.flight_num = t.flight_num
+                JOIN airline al ON f.airline_id = al.airline_id
+        JOIN ticket t ON al.airline_name = t.airline_name AND f.flight_num = t.flight_num
                 JOIN purchases p ON t.ticket_id = p.ticket_id
-                JOIN airport a1 ON f.departure_airport = a1.airport_name
-                JOIN airport a2 ON f.arrival_airport = a2.airport_name
+                JOIN airport a1 ON f.departure_airport = a1.airport_code
+                JOIN airport a2 ON f.arrival_airport = a2.airport_code
                 WHERE p.customer_email = %s
-                AND f.airline_name = %s
+                AND al.airline_name = %s
                 ORDER BY f.departure_time DESC
             """, (customer_email, session['airline']))
         else:
@@ -1115,8 +1205,10 @@ def staff_update_status():
     
     # Update status
     result = execute_query(
-        """UPDATE flight SET status = %s 
-           WHERE airline_name = %s AND flight_num = %s AND departure_time = %s""",
+        """UPDATE flight f
+           JOIN airline al ON f.airline_id = al.airline_id
+           SET f.status = %s
+           WHERE al.airline_name = %s AND f.flight_num = %s AND f.departure_time = %s""",
         (new_status, session['airline'], flight_num, departure_time), commit=True
     )
     
@@ -1132,30 +1224,42 @@ def staff_add_airplane():
     """Add new airplane (Admin only)"""
     if request.method == 'POST':
         airplane_id = sanitize_string(request.form.get('airplane_id'))
+        model = sanitize_string(request.form.get('model'))
         seats = sanitize_int(request.form.get('seats'), min_val=1)
-        
+
         if not airplane_id:
             flash('Airplane ID is required.', 'error')
+        elif not model:
+            flash('Aircraft model is required.', 'error')
         elif not seats:
             flash('Valid number of seats is required.', 'error')
         else:
-            # Check if airplane already exists
-            existing = execute_query(
-                "SELECT * FROM airplane WHERE airline_name = %s AND airplane_id = %s",
-                (session['airline'], airplane_id), fetch_one=True
+            # Get airline_id from session airline name
+            airline = execute_query(
+                "SELECT airline_id FROM airline WHERE airline_name = %s",
+                (session['airline'],), fetch_one=True
             )
-            if existing:
-                flash('Airplane ID already exists.', 'error')
+            if not airline:
+                flash('Airline not found.', 'error')
             else:
-                try:
-                    execute_query(
-                        "INSERT INTO airplane (airline_name, airplane_id, seats) VALUES (%s, %s, %s)",
-                        (session['airline'], airplane_id, seats), commit=True
-                    )
-                    flash('Airplane added successfully!', 'success')
-                    return redirect(url_for('staff_home'))
-                except Exception as e:
-                    flash('Failed to add airplane.', 'error')
+                # Check if airplane already exists
+                existing = execute_query(
+                    "SELECT * FROM airplane WHERE airline_id = %s AND airplane_id = %s",
+                    (airline['airline_id'], airplane_id), fetch_one=True
+                )
+                if existing:
+                    flash('Airplane ID already exists.', 'error')
+                else:
+                    try:
+                        execute_query(
+                            "INSERT INTO airplane (airline_id, airplane_id, model, seats) VALUES (%s, %s, %s, %s)",
+                            (airline['airline_id'], airplane_id, model, seats), commit=True
+                        )
+                        flash('Airplane added successfully!', 'success')
+                        return redirect(url_for('staff_home'))
+                    except Exception as e:
+                        app.logger.error(f"Failed to add airplane: {str(e)}")
+                        flash(f'Failed to add airplane: {str(e)}', 'error')
     
     return render_template('staff/add_airplane.html')
 
@@ -1167,23 +1271,24 @@ def staff_add_airplane():
 def staff_add_airport():
     """Add new airport (Admin only)"""
     if request.method == 'POST':
+        airport_code = sanitize_string(request.form.get('airport_code'))
         airport_name = sanitize_string(request.form.get('airport_name'))
-        airport_city = sanitize_string(request.form.get('airport_city'))
-        
-        if not airport_name or not airport_city:
-            flash('Airport name and city are required.', 'error')
+        city = sanitize_string(request.form.get('city'))
+
+        if not airport_code or not airport_name or not city:
+            flash('Airport code, name and city are required.', 'error')
         else:
             existing = execute_query(
-                "SELECT * FROM airport WHERE airport_name = %s",
-                (airport_name,), fetch_one=True
+                "SELECT * FROM airport WHERE airport_code = %s",
+                (airport_code,), fetch_one=True
             )
             if existing:
-                flash('Airport already exists.', 'error')
+                flash('Airport code already exists.', 'error')
             else:
                 try:
                     execute_query(
-                        "INSERT INTO airport (airport_name, airport_city) VALUES (%s, %s)",
-                        (airport_name, airport_city), commit=True
+                        "INSERT INTO airport (airport_code, airport_name, city) VALUES (%s, %s, %s)",
+                        (airport_code, airport_name, city), commit=True
                     )
                     flash('Airport added successfully!', 'success')
                     return redirect(url_for('staff_home'))
@@ -1199,10 +1304,19 @@ def staff_add_airport():
 @admin_required
 def staff_add_flight():
     """Add new flight (Admin only)"""
+    # Get airline_id from session
+    airline = execute_query(
+        "SELECT airline_id FROM airline WHERE airline_name = %s",
+        (session['airline'],), fetch_one=True
+    )
+    if not airline:
+        flash('Airline not found.', 'error')
+        return redirect(url_for('staff_home'))
+
     # Get airplanes and airports for dropdowns
     airplanes = execute_query(
-        "SELECT * FROM airplane WHERE airline_name = %s",
-        (session['airline'],)
+        "SELECT * FROM airplane WHERE airline_id = %s",
+        (airline['airline_id'],)
     )
     airports = execute_query("SELECT * FROM airport")
     
@@ -1212,8 +1326,15 @@ def staff_add_flight():
         departure_time = sanitize_string(request.form.get('departure_time'))
         arrival_airport = sanitize_string(request.form.get('arrival_airport'))
         arrival_time = sanitize_string(request.form.get('arrival_time'))
-        price = sanitize_float(request.form.get('price'), min_val=0)
-        airplane_id = sanitize_string(request.form.get('airplane_id'))
+        price = sanitize_float(request.form.get('price'), min_val=0, max_val=99999999.99)
+        airplane_id = sanitize_int(request.form.get('airplane_id'))
+
+        # Round price to 2 decimal places to match DECIMAL(10,2)
+        if price is not None:
+            price = round(price, 2)
+
+        # Debug logging
+        app.logger.info(f"Adding flight - price={price}, airplane_id={airplane_id}")
         
         errors = []
         if not flight_num:
@@ -1228,6 +1349,8 @@ def staff_add_flight():
             errors.append('Valid arrival time is required.')
         if price is None:
             errors.append('Valid price is required.')
+        elif price > 99999999.99:
+            errors.append('Price must be less than 100,000,000.')
         if not airplane_id:
             errors.append('Airplane selection is required.')
         
@@ -1237,17 +1360,18 @@ def staff_add_flight():
         else:
             try:
                 execute_query(
-                    """INSERT INTO flight 
-                       (airline_name, flight_num, departure_airport, departure_time, 
+                    """INSERT INTO flight
+                       (airline_id, flight_num, departure_airport, departure_time,
                         arrival_airport, arrival_time, price, status, airplane_id)
                        VALUES (%s, %s, %s, %s, %s, %s, %s, 'Upcoming', %s)""",
-                    (session['airline'], flight_num, departure_airport, departure_time,
+                    (airline['airline_id'], flight_num, departure_airport, departure_time,
                      arrival_airport, arrival_time, price, airplane_id), commit=True
                 )
                 flash('Flight added successfully!', 'success')
                 return redirect(url_for('staff_home'))
             except Exception as e:
-                flash('Failed to add flight. It may already exist.', 'error')
+                app.logger.error(f"Failed to add flight: {str(e)}")
+                flash(f'Failed to add flight: {str(e)}', 'error')
     
     return render_template('staff/add_flight.html', airplanes=airplanes, airports=airports)
 
@@ -1296,119 +1420,130 @@ def staff_add_agent():
 @login_required
 @staff_required
 def staff_analytics():
-    """View analytics dashboard"""
-    # Top booking agents by tickets this month
-    one_month_ago = datetime.now() - timedelta(days=30)
-    top_agents_month = execute_query("""
-        SELECT ba.email, COUNT(*) as ticket_count
-        FROM booking_agent ba
-        JOIN purchases p ON ba.booking_agent_id = p.booking_agent_id
-        JOIN ticket t ON p.ticket_id = t.ticket_id
+    """View comprehensive analytics for airline staff"""
+    from datetime import datetime, timedelta
+
+    airline_name = session.get('airline_name')
+
+    # Calculate date ranges - use last 30 days instead of last calendar month
+    now = datetime.now()
+    last_30_days = (now - timedelta(days=30)).strftime('%Y-%m-%d')
+    last_3_months = (now - timedelta(days=90)).strftime('%Y-%m-%d')
+    last_year = (now - timedelta(days=365)).strftime('%Y-%m-%d')
+
+    # Top booking agents by tickets (last 30 days)
+    top_agents_tickets = execute_query("""
+        SELECT ba.email, ba.booking_agent_id,
+               COUNT(t.ticket_id) as ticket_count
+        FROM ticket t
+        JOIN booking_agent ba ON t.agent_id = ba.booking_agent_id
         WHERE t.airline_name = %s
-        AND p.purchase_date >= %s
-        GROUP BY ba.email
+        AND t.purchase_date >= %s
+        GROUP BY ba.booking_agent_id, ba.email
         ORDER BY ticket_count DESC
         LIMIT 5
-    """, (session['airline'], one_month_ago))
-    
-    # Top booking agents by tickets this year
-    one_year_ago = datetime.now() - timedelta(days=365)
-    top_agents_year = execute_query("""
-        SELECT ba.email, COUNT(*) as ticket_count
-        FROM booking_agent ba
-        JOIN purchases p ON ba.booking_agent_id = p.booking_agent_id
-        JOIN ticket t ON p.ticket_id = t.ticket_id
-        WHERE t.airline_name = %s
-        AND p.purchase_date >= %s
-        GROUP BY ba.email
-        ORDER BY ticket_count DESC
-        LIMIT 5
-    """, (session['airline'], one_year_ago))
-    
-    # Top booking agents by commission this year
+    """, (airline_name, last_30_days))
+
+    # Top booking agents by commission (last 30 days)
     top_agents_commission = execute_query("""
-        SELECT ba.email, SUM(f.price * 0.10) as commission
-        FROM booking_agent ba
-        JOIN purchases p ON ba.booking_agent_id = p.booking_agent_id
-        JOIN ticket t ON p.ticket_id = t.ticket_id
-        JOIN flight f ON t.airline_name = f.airline_name AND t.flight_num = f.flight_num
+        SELECT ba.email, ba.booking_agent_id,
+               SUM(f.price * 0.10) as total_commission,
+               COUNT(t.ticket_id) as ticket_count
+        FROM ticket t
+        JOIN booking_agent ba ON t.agent_id = ba.booking_agent_id
+        JOIN flight f ON t.flight_num = f.flight_num
+        JOIN airline al ON f.airline_id = al.airline_id AND t.airline_name = al.airline_name
         WHERE t.airline_name = %s
-        AND p.purchase_date >= %s
-        GROUP BY ba.email
-        ORDER BY commission DESC
+        AND t.purchase_date >= %s
+        GROUP BY ba.booking_agent_id, ba.email
+        ORDER BY total_commission DESC
         LIMIT 5
-    """, (session['airline'], one_year_ago))
-    
-    # Most frequent customer last year
+    """, (airline_name, last_30_days))
+
+    # Most frequent customer (last year)
     frequent_customer = execute_query("""
-        SELECT p.customer_email, COUNT(*) as flight_count
-        FROM purchases p
-        JOIN ticket t ON p.ticket_id = t.ticket_id
+        SELECT c.name, c.email,
+               COUNT(t.ticket_id) as flight_count
+        FROM ticket t
+        JOIN customer c ON t.customer_id = c.customer_id
         WHERE t.airline_name = %s
-        AND p.purchase_date >= %s
-        GROUP BY p.customer_email
+        AND t.purchase_date >= %s
+        GROUP BY c.customer_id, c.name, c.email
         ORDER BY flight_count DESC
         LIMIT 1
-    """, (session['airline'], one_year_ago), fetch_one=True)
-    
-    # Tickets sold per month (last 12 months)
-    tickets_monthly = execute_query("""
-        SELECT DATE_FORMAT(p.purchase_date, '%%Y-%%m') as month, COUNT(*) as count
-        FROM purchases p
-        JOIN ticket t ON p.ticket_id = t.ticket_id
-        WHERE t.airline_name = %s
-        AND p.purchase_date >= %s
-        GROUP BY DATE_FORMAT(p.purchase_date, '%%Y-%%m')
-        ORDER BY month
-    """, (session['airline'], one_year_ago))
-    
-    # Flight delay statistics
-    delay_stats = execute_query("""
-        SELECT 
-            SUM(CASE WHEN status = 'Delayed' THEN 1 ELSE 0 END) as delayed,
-            SUM(CASE WHEN status != 'Delayed' THEN 1 ELSE 0 END) as on_time,
-            COUNT(*) as total
-        FROM flight
-        WHERE airline_name = %s
-        AND departure_time < NOW()
-    """, (session['airline'],), fetch_one=True)
-    
-    # Top destinations (last 3 months)
-    three_months_ago = datetime.now() - timedelta(days=90)
-    top_destinations_3m = execute_query("""
-        SELECT f.arrival_airport, a.airport_city, COUNT(*) as count
+    """, (airline_name, last_year), fetch_one=True)
+
+    # Tickets sold per month (last year)
+    monthly_tickets = execute_query("""
+        SELECT DATE_FORMAT(t.purchase_date, '%%Y-%%m') as month,
+               COUNT(t.ticket_id) as tickets_sold
         FROM ticket t
-        JOIN flight f ON t.airline_name = f.airline_name AND t.flight_num = f.flight_num
-        JOIN airport a ON f.arrival_airport = a.airport_name
-        JOIN purchases p ON t.ticket_id = p.ticket_id
         WHERE t.airline_name = %s
-        AND p.purchase_date >= %s
-        GROUP BY f.arrival_airport, a.airport_city
-        ORDER BY count DESC
-        LIMIT 5
-    """, (session['airline'], three_months_ago))
-    
+        AND t.purchase_date >= %s
+        GROUP BY month
+        ORDER BY month
+    """, (airline_name, last_year))
+
+    tickets_chart_labels = [row['month'] for row in monthly_tickets]
+    tickets_chart_data = [row['tickets_sold'] for row in monthly_tickets]
+
+    # Flight status statistics (all time)
+    status_stats = execute_query("""
+        SELECT f.status,
+               COUNT(*) as count
+        FROM flight f
+        JOIN airline al ON f.airline_id = al.airline_id
+        WHERE al.airline_name = %s
+        AND f.departure_time < NOW()
+        GROUP BY f.status
+    """, (airline_name,))
+
+    delayed_count = sum(row['count'] for row in status_stats if row['status'] == 'Delayed')
+    completed_count = sum(row['count'] for row in status_stats if row['status'] == 'Completed')
+    total_past_flights = delayed_count + completed_count
+    on_time_percentage = (completed_count / total_past_flights * 100) if total_past_flights > 0 else 0
+    delay_percentage = (delayed_count / total_past_flights * 100) if total_past_flights > 0 else 0
+
+    # Top destinations (last 3 months)
+    top_destinations_3m = execute_query("""
+        SELECT f.arrival_airport, ap.city,
+               COUNT(t.ticket_id) as ticket_count
+        FROM ticket t
+        JOIN flight f ON t.flight_num = f.flight_num
+        JOIN airline al ON f.airline_id = al.airline_id AND t.airline_name = al.airline_name
+        JOIN airport ap ON f.arrival_airport = ap.airport_code
+        WHERE t.airline_name = %s
+        AND t.purchase_date >= %s
+        GROUP BY f.arrival_airport, ap.city
+        ORDER BY ticket_count DESC
+        LIMIT 3
+    """, (airline_name, last_3_months))
+
     # Top destinations (last year)
     top_destinations_year = execute_query("""
-        SELECT f.arrival_airport, a.airport_city, COUNT(*) as count
+        SELECT f.arrival_airport, ap.city,
+               COUNT(t.ticket_id) as ticket_count
         FROM ticket t
-        JOIN flight f ON t.airline_name = f.airline_name AND t.flight_num = f.flight_num
-        JOIN airport a ON f.arrival_airport = a.airport_name
-        JOIN purchases p ON t.ticket_id = p.ticket_id
+        JOIN flight f ON t.flight_num = f.flight_num
+        JOIN airline al ON f.airline_id = al.airline_id AND t.airline_name = al.airline_name
+        JOIN airport ap ON f.arrival_airport = ap.airport_code
         WHERE t.airline_name = %s
-        AND p.purchase_date >= %s
-        GROUP BY f.arrival_airport, a.airport_city
-        ORDER BY count DESC
-        LIMIT 5
-    """, (session['airline'], one_year_ago))
-    
+        AND t.purchase_date >= %s
+        GROUP BY f.arrival_airport, ap.city
+        ORDER BY ticket_count DESC
+        LIMIT 3
+    """, (airline_name, last_year))
+
     return render_template('staff/analytics.html',
-                         top_agents_month=top_agents_month,
-                         top_agents_year=top_agents_year,
+                         top_agents_tickets=top_agents_tickets,
                          top_agents_commission=top_agents_commission,
                          frequent_customer=frequent_customer,
-                         tickets_monthly=tickets_monthly,
-                         delay_stats=delay_stats,
+                         tickets_chart_labels=tickets_chart_labels,
+                         tickets_chart_data=tickets_chart_data,
+                         on_time_percentage=on_time_percentage,
+                         delay_percentage=delay_percentage,
+                         delayed_count=delayed_count,
+                         completed_count=completed_count,
                          top_destinations_3m=top_destinations_3m,
                          top_destinations_year=top_destinations_year)
 

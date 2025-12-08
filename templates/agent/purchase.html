@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="card">
-    <h2 class="card-header">🎫 Book Flight for Customer</h2>
+    <h2 class="card-header">Book Flight for Customer</h2>
     
     {% if airlines %}
     <p class="mb-2">You are authorized to book for: <strong>{{ airlines|join(', ') }}</strong></p>
@@ -74,7 +74,7 @@
         <div style="text-align: right;">
             <div class="flight-price">${{ "%.2f"|format(flight.price) }}</div>
             {% if flight.available_seats > 0 %}
-            <form method="POST" action="{{ url_for('agent_purchase_ticket', airline=flight.airline_name, flight_num=flight.flight_num, departure_time=flight.departure_time) }}" style="margin-top: 0.5rem;">
+            <form method="POST" action="{{ url_for('agent_purchase_ticket', airline=flight.airline_name, flight_num=flight.flight_num, departure_time=flight.departure_time.strftime('%Y-%m-%d %H:%M:%S')) }}" style="margin-top: 0.5rem;">
                 <input type="email" name="customer_email" class="form-control" placeholder="Customer email" required style="width: 200px; display: inline-block; margin-right: 0.5rem;">
                 <button type="submit" class="btn btn-success btn-sm">Book</button>
             </form>

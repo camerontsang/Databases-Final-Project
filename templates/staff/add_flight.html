@@ -5,7 +5,7 @@
 {% block content %}
 <div class="auth-container" style="max-width: 600px;">
     <div class="card">
-        <h2 class="card-header">🛫 Add New Flight</h2>
+        <h2 class="card-header">Add New Flight</h2>
         <p class="mb-3">Adding flight for: <strong>{{ airline }}</strong></p>
         
         <form method="POST" action="{{ url_for('staff_add_flight') }}">
@@ -31,7 +31,7 @@
                     <select name="departure_airport" id="departure_airport" class="form-control" required>
                         <option value="">Select airport</option>
                         {% for airport in airports %}
-                        <option value="{{ airport.airport_name }}">{{ airport.airport_name }} - {{ airport.airport_city }}</option>
+                        <option value="{{ airport.airport_code }}">{{ airport.airport_name }} ({{ airport.airport_code }}) - {{ airport.city }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -40,7 +40,7 @@
                     <select name="arrival_airport" id="arrival_airport" class="form-control" required>
                         <option value="">Select airport</option>
                         {% for airport in airports %}
-                        <option value="{{ airport.airport_name }}">{{ airport.airport_name }} - {{ airport.airport_city }}</option>
+                        <option value="{{ airport.airport_code }}">{{ airport.airport_name }} ({{ airport.airport_code }}) - {{ airport.city }}</option>
                         {% endfor %}
                     </select>
                 </div>
